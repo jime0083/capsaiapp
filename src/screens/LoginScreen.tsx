@@ -4,7 +4,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { colors, spacing } from '../styles/theme';
-import { signInWithGoogle, createUserIfNotExists } from '../lib/firestoreApi';
+import { signInWithGoogle, createUserIfNotExists, getUserProfile } from '../lib/firestoreApi';
 
 type Props = { navigation: any };
 
@@ -13,7 +13,9 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
     try {
       const user = await signInWithGoogle();
       await createUserIfNotExists(user);
-      Alert.alert('ログイン成功', user.displayName);
+      const profile = await getUserProfile(user.uid);
+      if (!profile) throw new Error('ユーザープロファイルの取得に失敗しました');
+      Alert.alert('ログイン成功', String(profile['displayName'] || user.displayName));
       navigation.replace('OnboardGoalBudget');
     } catch (e) {
       Alert.alert('ログイン失敗', String(e));

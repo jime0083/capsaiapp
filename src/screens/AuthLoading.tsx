@@ -4,18 +4,23 @@
 import React, { useEffect } from 'react';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { colors } from '../styles/theme';
-import { getFirebaseApp } from '../lib/firebase';
+import { ensureFirebaseInitialized, getFirebaseAuth } from '../lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 
 type Props = { navigation: any };
 
 const AuthLoading: React.FC<Props> = ({ navigation }) => {
   useEffect(() => {
-    const app = getFirebaseApp();
-    if (app.auth.currentUser) {
-      navigation.replace('Home');
-    } else {
-      navigation.replace('Login');
-    }
+    ensureFirebaseInitialized();
+    const auth = getFirebaseAuth();
+    const unsub = onAuthStateChanged(auth, (u) => {
+      if (u) {
+        navigation.replace('Home');
+      } else {
+        navigation.replace('Login');
+      }
+    });
+    return () => unsub();
   }, [navigation]);
 
   return (

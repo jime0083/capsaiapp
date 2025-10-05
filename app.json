@@ -7,20 +7,21 @@
     "orientation": "portrait",
     "platforms": ["ios", "android", "web"],
     "jsEngine": "hermes",
+    "newArchEnabled": true,
     "extra": {
       "firebase": {
-        "apiKey": "__FIREBASE_API_KEY__",
-        "authDomain": "__FIREBASE_AUTH_DOMAIN__",
-        "projectId": "__FIREBASE_PROJECT_ID__",
-        "storageBucket": "__FIREBASE_STORAGE_BUCKET__",
-        "messagingSenderId": "__FIREBASE_MESSAGING_SENDER_ID__",
-        "appId": "__FIREBASE_APP_ID__"
+        "apiKey": "AIzaSyBx_P1iinVhaCdq4-xMV1qZxxQ9be7edDE",
+        "authDomain": "capsaiapp.firebaseapp.com",
+        "projectId": "capsaiapp",
+        "storageBucket": "capsaiapp.appspot.com",
+        "messagingSenderId": "587154500371",
+        "appId": "1:587154500371:web:b3fda6aa970f5e9ab8c8e6"
       },
       "googleAuth": {
-        "expoClientId": "__GOOGLE_EXPO_CLIENT_ID__",
-        "iosClientId": "__GOOGLE_IOS_CLIENT_ID__",
+        "expoClientId": "587154500371-fskfsltgngm4bm9ouu015u5jl54ueibu.apps.googleusercontent.com",
+        "iosClientId": "587154500371-pm446nt466lcgckft6eff9anesh911np.apps.googleusercontent.com",
         "androidClientId": "__GOOGLE_ANDROID_CLIENT_ID__",
-        "webClientId": "__GOOGLE_WEB_CLIENT_ID__"
+        "webClientId": "587154500371-fskfsltgngm4bm9ouu015u5jl54ueibu.apps.googleusercontent.com"
       }
     },
     "plugins": [
@@ -28,6 +29,9 @@
     ],
     "ios": {
       "bundleIdentifier": "com.anonymous.capsaiapp"
+    },
+    "android": {
+      "package": "com.anonymous.capsaiapp"
     }
   }
 }

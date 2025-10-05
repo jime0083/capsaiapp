@@ -1,6 +1,6 @@
 import Constants from 'expo-constants';
 import { FirebaseApp, initializeApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
+import { Auth, getAuth, initializeAuth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
 let firebaseApp: FirebaseApp | null = null;
@@ -27,7 +27,11 @@ export function ensureFirebaseInitialized(): FirebaseApp {
   if (firebaseApp) return firebaseApp;
   const config = getConfigFromExtra();
   firebaseApp = initializeApp(config);
-  authInstance = getAuth(firebaseApp);
+  try {
+    authInstance = initializeAuth(firebaseApp) as unknown as Auth;
+  } catch {
+    authInstance = getAuth(firebaseApp);
+  }
   firestoreInstance = getFirestore(firebaseApp);
   return firebaseApp;
 }
