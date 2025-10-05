@@ -1,0 +1,26 @@
+0 verbose cli /opt/homebrew/Cellar/node/24.9.0_1/bin/node /opt/homebrew/bin/npm
+1 info using npm@11.6.0
+2 info using node@v24.9.0
+3 silly config load:file:/opt/homebrew/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/jime0083/capsaiapp/.npmrc
+5 silly config load:file:/Users/jime0083/.npmrc
+6 silly config load:file:/opt/homebrew/etc/npmrc
+7 verbose title npm explain eas-cli
+8 verbose argv "explain" "eas-cli" "--json"
+9 verbose logfile logs-max:10 dir:/Users/jime0083/capsaiapp/.npm-cache/_logs/2025-10-05T10_16_04_918Z-
+10 verbose logfile /Users/jime0083/capsaiapp/.npm-cache/_logs/2025-10-05T10_16_04_918Z-debug-0.log
+11 silly logfile start cleaning logs, removing 1 files
+12 silly packumentCache heap:4496293888 maxSize:1124073472 maxEntrySize:562036736
+13 silly logfile done cleaning log files
+14 verbose stack Error: No dependencies found matching eas-cli
+14 verbose stack     at Explain.exec (/opt/homebrew/lib/node_modules/npm/lib/commands/explain.js:58:13)
+14 verbose stack     at async Npm.exec (/opt/homebrew/lib/node_modules/npm/lib/npm.js:208:9)
+14 verbose stack     at async module.exports (/opt/homebrew/lib/node_modules/npm/lib/cli/entry.js:67:5)
+15 error No dependencies found matching eas-cli
+16 verbose cwd /Users/jime0083/capsaiapp
+17 verbose os Darwin 24.5.0
+18 verbose node v24.9.0
+19 verbose npm  v11.6.0
+20 verbose exit 1
+21 verbose code 1
+22 error A complete log of this run can be found in: /Users/jime0083/capsaiapp/.npm-cache/_logs/2025-10-05T10_16_04_918Z-debug-0.log

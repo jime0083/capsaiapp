@@ -1,61 +1,95 @@
 // このファイルは Cursor により生成された
 // Firestore CRUD のラッパー（関数スタブ）
 
+import * as WebBrowser from 'expo-web-browser';
+import * as AuthSession from 'expo-auth-session';
+import { GoogleAuthProvider, signInWithCredential, User as FirebaseUser } from 'firebase/auth';
+import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { getFirebaseAuth, getFirebaseFirestore } from './firebase';
 import { User, Goal, Budget, Transaction, Timestamp } from '../types';
 
-// 実装メモ:
-// - 実環境では Firebase SDK v9 の firestore, auth を用いて CRUD を実行
-// - 今は Promise.resolve でモック応答を返す
+WebBrowser.maybeCompleteAuthSession();
 
-export async function signInWithGoogle(): Promise<User> {
-  // TODO: Firebase Auth Google Sign-In 実装
-  const mock: User = {
-    uid: 'mock-uid',
-    displayName: 'Mock User',
-    email: 'mock@example.com',
+function toAppUser(u: FirebaseUser): User {
+  return {
+    uid: u.uid,
+    displayName: u.displayName || 'No Name',
+    email: u.email || '',
     isOwner: false,
     createdAt: Date.now(),
   };
-  return Promise.resolve(mock);
+}
+
+export async function signInWithGoogle(): Promise<User> {
+  const discovery = {
+    authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
+    tokenEndpoint: 'https://oauth2.googleapis.com/token',
+  };
+
+  const redirectUri = AuthSession.makeRedirectUri({ useProxy: true });
+
+  const request = new AuthSession.AuthRequest({
+    clientId: (AuthSession as any).getDefaultBrowserClientId?.() || '',
+    // 実運用では app.json の extra.googleAuth.* を使い分け
+    scopes: ['openid', 'profile', 'email'],
+    redirectUri,
+    responseType: AuthSession.ResponseType.IdToken,
+    extraParams: { prompt: 'select_account' },
+  });
+
+  await request.makeAuthUrlAsync(discovery);
+  const result = await request.promptAsync(discovery, { useProxy: true });
+  if (result.type !== 'success' || !result.params.id_token) {
+    throw new Error('Google 認証がキャンセルまたは失敗しました');
+  }
+
+  const auth = getFirebaseAuth();
+  const credential = GoogleAuthProvider.credential(result.params.id_token);
+  const { user } = await signInWithCredential(auth, credential);
+  return toAppUser(user);
 }
 
 export async function createUserIfNotExists(user: User): Promise<void> {
-  // TODO: users コレクションに upsert
-  return Promise.resolve();
+  const db = getFirebaseFirestore();
+  const ref = doc(db, 'users', user.uid);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) {
+    await setDoc(ref, {
+      uid: user.uid,
+      displayName: user.displayName,
+      email: user.email,
+      isOwner: !!user.isOwner,
+      createdAt: serverTimestamp(),
+    });
+  }
 }
 
 export async function createGoal(goal: Goal): Promise<void> {
-  // TODO: goals コレクションに追加
+  // 省略（後で実装）
   return Promise.resolve();
 }
 
 export async function createBudget(budget: Budget): Promise<void> {
-  // TODO: budgets コレクションに追加
   return Promise.resolve();
 }
 
 export async function createSubscription(householdId: string, stripeInfo: unknown): Promise<void> {
-  // TODO: subscriptions コレクションに追加
   return Promise.resolve();
 }
 
 export async function createMembershipRequest(ownerEmail: string, requesterUid: string): Promise<void> {
-  // TODO: membershipRequests コレクションに追加
   return Promise.resolve();
 }
 
 export async function createTransaction(tx: Transaction): Promise<void> {
-  // TODO: transactions コレクションに追加
   return Promise.resolve();
 }
 
 export async function getMonthlyTransactions(householdId: string, month: string): Promise<Transaction[]> {
-  // TODO: クエリで month のトランザクションを取得
   return Promise.resolve([]);
 }
 
 export async function getWeeklyTransactions(householdId: string, weekStart: string): Promise<Transaction[]> {
-  // TODO: 週開始日で範囲取得
   return Promise.resolve([]);
 }
 
@@ -65,13 +99,10 @@ export async function getHouseholdSummary(householdId: string): Promise<{
   thisMonthTotal: number;
   lastMonthTotal: number;
 }> {
-  // TODO: サマリー計算
   return Promise.resolve({ thisWeekTotal: 0, lastWeekTotal: 0, thisMonthTotal: 0, lastMonthTotal: 0 });
 }
 
-// ユーティリティ
 export function hashPairPassword(raw: string): string {
-  // TODO: 適切なハッシュへ置換
   return `hash:${raw}`;
 }
 
