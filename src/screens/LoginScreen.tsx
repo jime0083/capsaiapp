@@ -16,7 +16,7 @@ const LoginScreen: React.FC<Props> = ({ navigation }) => {
       const profile = await getUserProfile(user.uid);
       if (!profile) throw new Error('ユーザープロファイルの取得に失敗しました');
       Alert.alert('ログイン成功', String(profile['displayName'] || user.displayName));
-      navigation.replace('OnboardGoalBudget');
+      navigation.replace('SubscriptionChoice');
     } catch (e) {
       Alert.alert('ログイン失敗', String(e));
     }
