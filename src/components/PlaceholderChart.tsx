@@ -12,6 +12,7 @@ type Props = {
   type: 'pie';
   data: Slice[]; // カテゴリ別の {key,value,color}
   height?: number;
+  title?: string; // グラフタイトル（背景内上部）
 };
 
 function polarToCartesian(cx: number, cy: number, r: number, angle: number) {
@@ -26,10 +27,11 @@ function arcPath(cx: number, cy: number, r: number, startAngle: number, endAngle
   return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} 0 ${end.x} ${end.y} L ${cx} ${cy} Z`;
 }
 
-export const PlaceholderChart: React.FC<Props> = ({ data, height = 160 }) => {
+export const PlaceholderChart: React.FC<Props> = ({ data, height = 160, title }) => {
   const total = useMemo(() => data.reduce((a, s) => a + (s.value || 0), 0) || 1, [data]);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-  const size = height;
+  const headerH = title ? 28 : 0;
+  const size = Math.max(0, height - headerH);
   const r = size / 2 - 8;
   const cx = size / 2;
   const cy = size / 2;
@@ -39,8 +41,10 @@ export const PlaceholderChart: React.FC<Props> = ({ data, height = 160 }) => {
 
   return (
     <View style={[styles.container, { height, width: '100%' }]}> 
-      <Svg height={size} width={size}>
-        <G>
+      {title ? <Text style={styles.title}>{title}</Text> : null}
+      <View style={[styles.chartWrap, { height: size, width: '100%' }]}> 
+        <Svg height={size} width={size}>
+          <G>
           {data.map((s, idx) => {
             const sliceAngle = (s.value / total) * 360;
             const d = arcPath(cx, cy, r, angle, angle + sliceAngle);
@@ -59,8 +63,9 @@ export const PlaceholderChart: React.FC<Props> = ({ data, height = 160 }) => {
               />
             );
           })}
-        </G>
-      </Svg>
+          </G>
+        </Svg>
+      </View>
       {hovered ? (
         <View style={styles.tooltip}>
           <Text style={styles.tooltipText}>{hovered.key}</Text>
@@ -77,8 +82,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E5EA',
     backgroundColor: '#F3F2F7',
     borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: 'stretch',
+    justifyContent: 'flex-start',
     position: 'relative',
     alignSelf: 'center',
     shadowColor: '#000',
@@ -86,6 +91,18 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.16,
     shadowRadius: 12,
     elevation: 6,
+  },
+  title: {
+    alignSelf: 'flex-start',
+    marginTop: 8,
+    marginLeft: 12,
+    color: '#000',
+    fontWeight: '700',
+  },
+  chartWrap: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   tooltip: {
     position: 'absolute',

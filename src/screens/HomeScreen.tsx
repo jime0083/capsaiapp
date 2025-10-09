@@ -52,6 +52,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const [thisMonthSpending, setThisMonthSpending] = useState(0);
   const [pie, setPie] = useState<{ key: string; value: number; color: string }[]>([]);
   const [eatingOut, setEatingOut] = useState<{ count: number; total: number }>({ count: 0, total: 0 });
+  const [convenienceCount, setConvenienceCount] = useState<number>(0);
   const isFocused = useIsFocused();
 
   useEffect(() => {
@@ -95,6 +96,8 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         const count = eating.length;
         const total = eating.reduce((a, t) => a + (Number(t.sharedAmount) || 0), 0);
         setEatingOut({ count, total });
+        const convenience = thisMonth.filter((t) => t.category === 'コンビニ');
+        setConvenienceCount(convenience.length);
       });
     };
 
@@ -115,6 +118,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* 目標ヘッダを別要素として改行分離 */}
       <TopBanner
         title={goal?.title || '目標未設定'}
         imageUrl={undefined}
@@ -125,21 +129,36 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       <View style={[styles.section, styles.rowGap]}> 
         <View style={[styles.badge, { backgroundColor: '#F3E0E4' }]}> 
           <Text style={styles.badgeTitleLight}>今月の出費</Text>
-          <Text style={styles.badgeValueLarge}>{thisMonthSpending.toLocaleString()} 円</Text>
+          <Text style={styles.badgeValueLarge}>
+            <Text style={styles.valueSpendingNumber}>{thisMonthSpending.toLocaleString()}</Text>
+            <Text style={styles.badgeUnit}> 円</Text>
+          </Text>
         </View>
         <View style={[styles.badge, { backgroundColor: '#DDE9F7' }]}> 
           <Text style={styles.badgeTitleLight}>今月の予算あと</Text>
-          <Text style={styles.badgeValueLarge}>{thisMonthBudgetLeft.toLocaleString()} 円</Text>
+          <Text style={styles.badgeValueLarge}>
+            <Text style={styles.valueBudgetNumber}>{thisMonthBudgetLeft.toLocaleString()}</Text>
+            <Text style={styles.badgeUnit}> 円</Text>
+          </Text>
         </View>
       </View>
 
-      <View style={[styles.sectionCenter, { marginTop: spacing.md }]}> 
-        <PlaceholderChart type="pie" data={pie.length ? pie : [{ key: 'なし', value: 1, color: '#444' }]} />
+      <View style={[styles.section, styles.rowGap, { marginTop: spacing.sm }]}> 
+        <View style={[styles.miniBadge, { backgroundColor: '#F3E9DF' }]}> 
+          <Text style={styles.miniTitle}>外食回数</Text>
+          <Text style={[styles.miniValue, { color: '#FF7F00' }]}>{eatingOut.count} <Text style={styles.badgeUnit}>回</Text></Text>
+        </View>
+        <View style={[styles.miniBadge, { backgroundColor: '#DFEEE7' }]}> 
+          <Text style={styles.miniTitle}>コンビニ利用</Text>
+          <Text style={[styles.miniValue, { color: '#0DFF00' }]}>{convenienceCount} <Text style={styles.badgeUnit}>回</Text></Text>
+        </View>
       </View>
 
-      <View style={[styles.section, { marginTop: spacing.md }]}> 
-        <Text style={styles.sub}>{`今月の外食回数: ${eatingOut.count} 回　${eatingOut.total.toLocaleString()} 円`}</Text>
+      <View style={[styles.section, { marginTop: spacing.md, width: '100%' }]}> 
+        <PlaceholderChart type="pie" title="今月の支出内訳" height={220} data={pie.length ? pie : [{ key: 'なし', value: 1, color: '#444' }]} />
       </View>
+
+      
 
       <TouchableOpacity style={styles.cta} activeOpacity={0.8} onPress={() => navigation.navigate('Input')}>
         <Text style={styles.ctaText}>記録する</Text>
@@ -159,6 +178,12 @@ const styles = StyleSheet.create({
   badge: { flex: 1, borderRadius: 12, padding: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
   badgeTitleLight: { color: '#000', fontWeight: '700', marginBottom: 4 },
   badgeValueLarge: { color: '#000', fontSize: 21, fontWeight: '700' },
+  badgeUnit: { color: '#000', fontSize: 14, fontWeight: '700' },
+  valueSpendingNumber: { color: '#FF0036' },
+  valueBudgetNumber: { color: '#0076FF' },
+  miniBadge: { flex: 1, borderRadius: 12, padding: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
+  miniTitle: { color: '#000', fontWeight: '700', marginBottom: 2 },
+  miniValue: { color: '#000', fontSize: 18, fontWeight: '700' },
   cta: { backgroundColor: colors.positive, paddingVertical: spacing.md, alignItems: 'center', borderRadius: 12, marginTop: spacing.lg },
   ctaText: { color: '#000', fontWeight: '700' },
 });

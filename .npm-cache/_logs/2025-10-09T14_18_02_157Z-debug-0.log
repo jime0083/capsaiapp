@@ -7,7 +7,7 @@
 6 silly config load:file:/opt/homebrew/etc/npmrc
 7 verbose title npm run web
 8 verbose argv "run" "web"
-9 verbose logfile logs-max:10 dir:/Users/jime0083/capsaiapp/.npm-cache/_logs/2025-10-06T13_27_37_853Z-
-10 verbose logfile /Users/jime0083/capsaiapp/.npm-cache/_logs/2025-10-06T13_27_37_853Z-debug-0.log
+9 verbose logfile logs-max:10 dir:/Users/jime0083/capsaiapp/.npm-cache/_logs/2025-10-09T14_18_02_157Z-
+10 verbose logfile /Users/jime0083/capsaiapp/.npm-cache/_logs/2025-10-09T14_18_02_157Z-debug-0.log
 11 silly logfile start cleaning logs, removing 1 files
 12 silly logfile done cleaning log files

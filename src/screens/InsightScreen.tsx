@@ -121,17 +121,31 @@ const InsightScreen: React.FC = () => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>今月の支出内訳</Text>
-      <View style={styles.centerRow}>
-        <PlaceholderChart type="pie" data={pie.length ? pie : [{ key: 'なし', value: 1, color: '#444' }]} />
+      <View style={{ width: '100%', marginTop: spacing.sm }}>
+        <PlaceholderChart type="pie" title="今月の支出内訳" height={220} data={pie.length ? pie : [{ key: 'なし', value: 1, color: '#444' }]} />
       </View>
-      <Text style={styles.row}>{`今月の支出額: ${thisMonth.toLocaleString()} 円 (先月比 ${monthDiff >= 0 ? '+' : ''}${monthDiff.toLocaleString()} 円)`}</Text>
-      <Text style={styles.row}>{`今週の支出額: ${thisWeek.toLocaleString()} 円 (先週比 ${weekDiff >= 0 ? '+' : ''}${weekDiff.toLocaleString()} 円)`}</Text>
+      <View style={{ flexDirection: 'row', gap: 12, width: '100%', marginTop: spacing.md }}>
+        <View style={{ flex: 1, backgroundColor: '#F3E0E4', borderRadius: 12, padding: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 }}>
+          <Text style={{ color: '#000', fontWeight: '700', marginBottom: 4 }}>今月の支出</Text>
+          <Text style={{ color: '#000', fontSize: 21, fontWeight: '700' }}>
+            <Text style={{ color: '#FF0036' }}>{thisMonth.toLocaleString()}</Text>
+            <Text style={{ color: '#000', fontSize: 14, fontWeight: '700' }}> 円</Text>
+          </Text>
+        </View>
+        <View style={{ flex: 1, backgroundColor: '#DDE9F7', borderRadius: 12, padding: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 }}>
+          <Text style={{ color: '#000', fontWeight: '700', marginBottom: 4 }}>今週の支出</Text>
+          <Text style={{ color: '#000', fontSize: 21, fontWeight: '700' }}>
+            <Text style={{ color: '#0076FF' }}>{thisWeek.toLocaleString()}</Text>
+            <Text style={{ color: '#000', fontSize: 14, fontWeight: '700' }}> 円</Text>
+          </Text>
+        </View>
+      </View>
 
       <View style={{ height: spacing.lg }} />
-      <Text style={styles.title}>期間比較（直近1年）</Text>
-      <View style={styles.centerRow}>
-        <LineChart data={line} height={200} />
+      <View style={{ width: '100%', marginTop: spacing.lg }}>
+        {/* 背景内タイトル（LineChart は背景内タイトル未対応のため上にテキスト配置） */}
+        <Text style={[styles.graphHeader]}>期間比較（直近1年）</Text>
+        <LineChart data={line} height={220} />
       </View>
       <View style={{ height: 24 }} />
     </ScrollView>
@@ -144,6 +158,7 @@ const styles = StyleSheet.create({
   title: { color: colors.text, fontSize: 18, marginBottom: spacing.sm },
   row: { color: colors.text, fontSize: 14, marginTop: spacing.xs },
   centerRow: { alignItems: 'center' },
+  graphHeader: { color: '#000', fontWeight: '700', marginLeft: 12, marginBottom: 4 },
 });
 
 export default InsightScreen;

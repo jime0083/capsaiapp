@@ -17,8 +17,9 @@ export const TopBanner: React.FC<Props> = ({ title, imageUrl, remainingAmount, m
     <View style={styles.card}>
       {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.image} /> : null}
       <View style={styles.textWrap}>
+        <Text style={styles.headLabel}>目標</Text>
         <Text style={styles.title}>
-          <Text style={styles.titleWeak}>目標: あと</Text>
+          <Text style={styles.titleWeak}>あと</Text>
           <Text style={styles.titleStrong}>{monthsRemaining}</Text>
           <Text style={styles.titleWeak}>ヶ月で</Text>
           {"\n"}
@@ -51,6 +52,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A1A1A',
   },
   textWrap: { flex: 1 },
+  headLabel: {
+    color: '#000',
+    textDecorationLine: 'underline',
+    fontSize: Math.round(baseTitleSize * 0.7), // 見出しより30%小さく
+    marginBottom: 2,
+  },
   title: {
     color: '#FDB523',
     fontSize: baseTitleSize,

@@ -149,9 +149,13 @@ const GoalsScreen: React.FC = () => {
 
         <Text style={styles.title}>積み上げ履歴</Text>
         <View style={styles.cardPrimary}>
-          {carryLatest5.map((c) => (
-            <Text key={c.month} style={styles.sub}>{`${c.month}: ${c.amount.toLocaleString()} 円`}</Text>
-          ))}
+          {carryLatest5.length === 0 ? (
+            <Text style={styles.sub}>まだ表示するデータがありません</Text>
+          ) : (
+            carryLatest5.map((c) => (
+              <Text key={c.month} style={styles.sub}>{`${c.month}: ${c.amount.toLocaleString()} 円`}</Text>
+            ))
+          )}
           <TouchableOpacity style={styles.moreBtn} onPress={() => setShowMoreCarry(true)}>
             <Text style={styles.moreBtnText}>もっと見る</Text>
           </TouchableOpacity>
@@ -179,9 +183,13 @@ const GoalsScreen: React.FC = () => {
           <View style={styles.modalCard}>
             <Text style={styles.title}>過去のキャリーオーバー</Text>
             <ScrollView style={{ maxHeight: 320 }}>
-              {carryAll.map((c) => (
-                <Text key={`all-${c.month}`} style={styles.sub}>{`${c.month}: ${c.amount.toLocaleString()} 円`}</Text>
-              ))}
+              {carryAll.length === 0 ? (
+                <Text style={styles.sub}>まだ表示するデータがありません</Text>
+              ) : (
+                carryAll.map((c) => (
+                  <Text key={`all-${c.month}`} style={styles.sub}>{`${c.month}: ${c.amount.toLocaleString()} 円`}</Text>
+                ))
+              )}
             </ScrollView>
             <TouchableOpacity style={[styles.primary, { marginTop: spacing.md }]} onPress={() => setShowMoreCarry(false)}>
               <Text style={styles.primaryText}>閉じる</Text>
