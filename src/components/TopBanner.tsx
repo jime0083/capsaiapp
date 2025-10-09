@@ -1,5 +1,5 @@
 // このファイルは Cursor により生成された
-// Home の目標カード: 目標名・画像（任意）・残額・今月の支出を表示
+// Home の目標カード: 目標名・残額・残り期間を表示
 
 import React from 'react';
 import { View, Text, Image, StyleSheet } from 'react-native';
@@ -9,21 +9,31 @@ type Props = {
   title: string;
   imageUrl?: string;
   remainingAmount: number;
-  thisMonthSpending: number;
+  monthsRemaining: number;
 };
 
-export const TopBanner: React.FC<Props> = ({ title, imageUrl, remainingAmount, thisMonthSpending }) => {
+export const TopBanner: React.FC<Props> = ({ title, imageUrl, remainingAmount, monthsRemaining }) => {
   return (
     <View style={styles.card}>
       {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.image} /> : null}
       <View style={styles.textWrap}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.remaining}>あと{remainingAmount.toLocaleString()}円</Text>
-        <Text style={styles.monthSpend}>今月の支出 {thisMonthSpending.toLocaleString()}円</Text>
+        <Text style={styles.title}>
+          <Text style={styles.titleWeak}>目標: あと</Text>
+          <Text style={styles.titleStrong}>{monthsRemaining}</Text>
+          <Text style={styles.titleWeak}>ヶ月で</Text>
+          {"\n"}
+          <Text style={styles.titleStrong}>{title}</Text>
+        </Text>
+        <Text style={styles.remaining}>
+          目標達成まであと
+          <Text style={styles.remainingNumber}>{`${remainingAmount.toLocaleString()}円`}</Text>
+        </Text>
       </View>
     </View>
   );
 };
+
+const baseTitleSize = Math.round((typography.heading || 18) * 1.5);
 
 const styles = StyleSheet.create({
   card: {
@@ -42,19 +52,29 @@ const styles = StyleSheet.create({
   },
   textWrap: { flex: 1 },
   title: {
-    color: colors.text,
-    fontSize: typography.heading,
+    color: '#FDB523',
+    fontSize: baseTitleSize,
     fontFamily: typography.fontFamily,
     marginBottom: spacing.xs,
   },
+  titleWeak: {
+    color: '#FDB523',
+    fontSize: Math.round(baseTitleSize * 0.8),
+  },
+  titleStrong: {
+    color: '#FDB523',
+    fontSize: baseTitleSize,
+    fontWeight: '700',
+  },
   remaining: {
-    color: colors.positive,
+    color: '#000000',
     fontSize: 18,
     marginBottom: spacing.xs,
   },
-  monthSpend: {
-    color: colors.text,
-    fontSize: 14,
+  remainingNumber: {
+    color: '#000000',
+    fontSize: 22,
+    fontWeight: '700',
   },
 });
 

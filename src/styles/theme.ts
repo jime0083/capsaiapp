@@ -2,9 +2,9 @@
 // ダークテーマ用のカラートークン / 共通スタイル
 
 export const colors = {
-  background: '#000000',
-  card: '#0D0D0D',
-  text: '#FFFFFF',
+  background: '#FFF6D9',
+  card: '#F3F2F7',
+  text: '#000000',
   positive: '#B8FF60',
   negative: '#FF4D4D',
   muted: '#8C8C8C',

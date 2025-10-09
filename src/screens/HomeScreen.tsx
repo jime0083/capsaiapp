@@ -1,53 +1,144 @@
 // このファイルは Cursor により生成された
-// Home: 目標カード、ダミーチャート、今週サマリ、記録ボタン
+// Home: 最新目標、残額、今月の出費(共有出費)/予算残、用途別グラフ、記録ボタン
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { colors, spacing } from '../styles/theme';
 import TopBanner from '../components/TopBanner';
 import PlaceholderChart from '../components/PlaceholderChart';
-import { sampleGoal, sampleTransactions } from '../mock/sampleData';
+import { getFirebaseAuth } from '../lib/firebase';
+import { getUserProfile, subscribeLatestGoal, subscribeUserTransactionsUnion } from '../lib/firestoreApi';
+import { useIsFocused } from '@react-navigation/native';
+import { categoryColors } from '../mock/sampleData';
+
+function toMonthString(value: any): string | null {
+  try {
+    if (typeof value === 'string') {
+      const s = value.replace(/\//g, '-');
+      if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s.slice(0, 7);
+      if (/^\d{4}-\d{2}$/.test(s)) return s;
+      const d = new Date(s);
+      if (!isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      return null;
+    }
+    if (value && typeof value.seconds === 'number') {
+      const d = new Date(value.seconds * 1000);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    }
+    const d = new Date(value);
+    if (!isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    return null;
+  } catch { return null; }
+}
+
+function isThisMonth(dateLike: any): boolean {
+  const m = toMonthString(dateLike);
+  const now = toMonthString(new Date());
+  return !!m && m === now;
+}
 
 type Props = { navigation: any };
 
+type GoalVM = {
+  title: string;
+  targetAmount: number;
+  currentAmount: number;
+  monthlyIncome: number;
+  deadline: number;
+};
+
 const HomeScreen: React.FC<Props> = ({ navigation }) => {
-  const [showWeeklyNotice, setShowWeeklyNotice] = useState(false);
-  const [showMonthlyNotice, setShowMonthlyNotice] = useState(false);
+  const [goal, setGoal] = useState<GoalVM | null>(null);
+  const [thisMonthSpending, setThisMonthSpending] = useState(0);
+  const [pie, setPie] = useState<{ key: string; value: number; color: string }[]>([]);
+  const [eatingOut, setEatingOut] = useState<{ count: number; total: number }>({ count: 0, total: 0 });
+  const isFocused = useIsFocused();
 
-  const thisMonthSpending = useMemo(() => {
-    const month = new Date().getMonth() + 1;
-    const pfx = `2025-${String(month).padStart(2, '0')}`;
-    return sampleTransactions
-      .filter((t) => t.date.startsWith(pfx))
-      .reduce((sum, t) => sum + t.totalAmount, 0);
-  }, []);
-
-  const lastWeek = 12000; // mock
-  const thisWeek = 10000; // mock
-  const diff = thisWeek - lastWeek;
-
-  const remaining = Math.max(sampleGoal.targetAmount - sampleGoal.currentAmount, 0);
-
-  // 週次/月次ポップアップトリガー（簡易）
   useEffect(() => {
+    let unsubGoal: (() => void) | null = null;
+    let unsubUserTx: (() => void) | null = null;
+
+    const start = async () => {
+      const auth = getFirebaseAuth();
+      const uid = auth.currentUser?.uid;
+      if (!uid) return;
+      const profile = await getUserProfile(uid);
+      const householdId = (profile && (profile['householdId'] as string)) || null;
+      const pairUserIds: string[] = (profile && (profile['pairUserIds'] as string[])) || [];
+      const allowedUserIds = [uid, ...pairUserIds];
+      if (!householdId) return;
+
+      unsubGoal = subscribeLatestGoal(householdId, (g) => {
+        if (g) {
+          setGoal({
+            title: g.title,
+            targetAmount: g.targetAmount,
+            currentAmount: g.currentAmount,
+            monthlyIncome: Number(g.monthlyIncome || 0),
+            deadline: g.deadline,
+          });
+        } else { setGoal(null); }
+      });
+
+      unsubUserTx = subscribeUserTransactionsUnion(householdId, allowedUserIds, (txs) => {
+        const thisMonth = txs.filter((t) => isThisMonth(t.date));
+        const sumShared = thisMonth.reduce((acc, t) => acc + (Number(t.sharedAmount) || 0), 0);
+        setThisMonthSpending(sumShared);
+        const byCat = new Map<string, number>();
+        thisMonth.forEach((t) => {
+          const k = t.category || 'その他';
+          byCat.set(k, (byCat.get(k) || 0) + (Number(t.sharedAmount) || 0));
+        });
+        const pieData = Array.from(byCat.entries()).map(([key, value]) => ({ key, value, color: categoryColors[key] || '#888' }));
+        setPie(pieData);
+        const eating = thisMonth.filter((t) => t.category === '外食');
+        const count = eating.length;
+        const total = eating.reduce((a, t) => a + (Number(t.sharedAmount) || 0), 0);
+        setEatingOut({ count, total });
+      });
+    };
+
+    if (isFocused) start();
+    return () => { if (unsubGoal) unsubGoal(); if (unsubUserTx) unsubUserTx(); };
+  }, [isFocused]);
+
+  const remainingToTarget = useMemo(() => !goal ? 0 : Math.max(goal.targetAmount - goal.currentAmount, 0), [goal]);
+  const monthsRemaining = useMemo(() => {
+    if (!goal) return 0;
     const now = new Date();
-    const isMonday = now.getDay() === 1; // 0:Sun,1:Mon
-    const isFirstDay = now.getDate() === 1;
-    setShowWeeklyNotice(isMonday);
-    setShowMonthlyNotice(isFirstDay);
-  }, []);
+    const end = new Date(goal.deadline);
+    const years = end.getFullYear() - now.getFullYear();
+    const months = years * 12 + (end.getMonth() - now.getMonth());
+    return Math.max(months, 0);
+  }, [goal]);
+  const thisMonthBudgetLeft = useMemo(() => !goal ? 0 : Math.max(goal.monthlyIncome - thisMonthSpending, 0), [goal, thisMonthSpending]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <TopBanner title={sampleGoal.title} imageUrl={sampleGoal.imageUrl} remainingAmount={remaining} thisMonthSpending={thisMonthSpending} />
+      <TopBanner
+        title={goal?.title || '目標未設定'}
+        imageUrl={undefined}
+        remainingAmount={remainingToTarget}
+        monthsRemaining={monthsRemaining}
+      />
 
-      <View style={styles.section}>
-        {showWeeklyNotice && <Text style={styles.notice}>今週の目標を設定してみましょう（週次）</Text>}
-        {showMonthlyNotice && <Text style={styles.notice}>月初です。予算と目標を見直しましょう（月次）</Text>}
-        <PlaceholderChart type="pie" data={[40, 30, 20, 10]} />
-        <Text style={[styles.delta, { color: diff <= 0 ? colors.positive : colors.negative }]}>
-          {diff <= 0 ? `先週より ${Math.abs(diff).toLocaleString()} 円少ない` : `先週より ${diff.toLocaleString()} 円多い`}
-        </Text>
+      <View style={[styles.section, styles.rowGap]}> 
+        <View style={[styles.badge, { backgroundColor: '#F3E0E4' }]}> 
+          <Text style={styles.badgeTitleLight}>今月の出費</Text>
+          <Text style={styles.badgeValueLarge}>{thisMonthSpending.toLocaleString()} 円</Text>
+        </View>
+        <View style={[styles.badge, { backgroundColor: '#DDE9F7' }]}> 
+          <Text style={styles.badgeTitleLight}>今月の予算あと</Text>
+          <Text style={styles.badgeValueLarge}>{thisMonthBudgetLeft.toLocaleString()} 円</Text>
+        </View>
+      </View>
+
+      <View style={[styles.sectionCenter, { marginTop: spacing.md }]}> 
+        <PlaceholderChart type="pie" data={pie.length ? pie : [{ key: 'なし', value: 1, color: '#444' }]} />
+      </View>
+
+      <View style={[styles.section, { marginTop: spacing.md }]}> 
+        <Text style={styles.sub}>{`今月の外食回数: ${eatingOut.count} 回　${eatingOut.total.toLocaleString()} 円`}</Text>
       </View>
 
       <TouchableOpacity style={styles.cta} activeOpacity={0.8} onPress={() => navigation.navigate('Input')}>
@@ -61,16 +152,14 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg },
-  section: { marginTop: spacing.lg },
-  notice: { color: colors.text, marginBottom: spacing.sm },
-  delta: { marginTop: spacing.sm, fontSize: 14 },
-  cta: {
-    backgroundColor: colors.positive,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    borderRadius: 12,
-    marginTop: spacing.lg,
-  },
+  section: { marginTop: spacing.lg, alignItems: 'flex-start' },
+  sectionCenter: { marginTop: spacing.lg, alignItems: 'center' },
+  sub: { color: colors.text, marginTop: 6, textAlign: 'left' },
+  rowGap: { flexDirection: 'row', gap: 12, width: '100%' },
+  badge: { flex: 1, borderRadius: 12, padding: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
+  badgeTitleLight: { color: '#000', fontWeight: '700', marginBottom: 4 },
+  badgeValueLarge: { color: '#000', fontSize: 21, fontWeight: '700' },
+  cta: { backgroundColor: colors.positive, paddingVertical: spacing.md, alignItems: 'center', borderRadius: 12, marginTop: spacing.lg },
   ctaText: { color: '#000', fontWeight: '700' },
 });
 

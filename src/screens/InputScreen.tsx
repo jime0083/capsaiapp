@@ -1,13 +1,14 @@
 // このファイルは Cursor により生成された
-// Input: 合算モードで sharedAmount を計算して保存
+// Input: 支出を記録（個人出費を差し引いた残りを共有出費として保存）
 
 import React from 'react';
 import { View, StyleSheet, Alert, ScrollView } from 'react-native';
 import { colors, spacing } from '../styles/theme';
 import ExpenseForm from '../components/ExpenseForm';
 import { categoryColors } from '../mock/sampleData';
-import { createTransaction } from '../lib/firestoreApi';
+import { createTransaction, getUserProfile, ensureUserHousehold } from '../lib/firestoreApi';
 import { Transaction } from '../types';
+import { getFirebaseAuth } from '../lib/firebase';
 
 type Props = { navigation: any };
 
@@ -22,16 +23,26 @@ const InputScreen: React.FC<Props> = ({ navigation }) => {
     sharedAmount: number;
     isShared: boolean;
   }) => {
+    const uid = getFirebaseAuth().currentUser?.uid;
+    if (!uid) {
+      Alert.alert('エラー', 'ログイン状態を確認できません');
+      return;
+    }
+    const profile = await getUserProfile(uid);
+    const householdId = (profile && (profile['householdId'] as string)) || `hh-${uid}`;
+    // ルール満たすため householdId をユーザープロファイルに保証
+    await ensureUserHousehold(uid, householdId);
+
     const tx: Transaction = {
       id: `tx-${Date.now()}`,
-      householdId: 'h1',
-      userId: 'u1',
+      householdId,
+      uid,
       date: p.date,
       totalAmount: p.totalAmount,
       personalAmount: p.personalAmount,
       sharedAmount: p.sharedAmount,
       category: p.category,
-      isShared: p.isShared,
+      isShared: true,
     };
     await createTransaction(tx);
     Alert.alert('保存しました');

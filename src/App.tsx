@@ -10,6 +10,7 @@ import LoginScreen from './screens/LoginScreen';
 import OnboardGoalBudget from './screens/OnboardGoalBudget';
 import SubscriptionChoice from './screens/SubscriptionChoice';
 import SetPairPassword from './screens/SetPairPassword';
+import SubscriptionScreen from './screens/SubscriptionScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -22,6 +23,7 @@ const App = () => {
         <Stack.Screen name="OnboardGoalBudget" component={OnboardGoalBudget} />
         <Stack.Screen name="SubscriptionChoice" component={SubscriptionChoice} />
         <Stack.Screen name="SetPairPassword" component={SetPairPassword} />
+        <Stack.Screen name="Subscription" component={SubscriptionScreen} />
         <Stack.Screen name="Home" component={BottomTabs} />
       </Stack.Navigator>
     </NavigationContainer>

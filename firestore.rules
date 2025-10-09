@@ -1,0 +1,42 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function uid() { return request.auth.uid; }
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/users/$(uid())) &&
+             get(/databases/$(database)/documents/users/$(uid())).data.isAdmin == true;
+    }
+    function userHousehold() {
+      return exists(/databases/$(database)/documents/users/$(uid())) ?
+        get(/databases/$(database)/documents/users/$(uid())).data.householdId : null;
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && (userId == uid() || isAdmin());
+      allow write: if isSignedIn() && userId == uid();
+    }
+
+    match /goals/{goalId} {
+      allow read: if isSignedIn() && (resource.data.householdId == userHousehold() || isAdmin());
+      allow write: if isSignedIn() && (request.resource.data.householdId == userHousehold() || isAdmin());
+    }
+
+    match /transactions/{txId} {
+      allow read: if isSignedIn() && (resource.data.householdId == userHousehold() || isAdmin());
+      allow write: if isSignedIn() && (request.resource.data.householdId == userHousehold() || isAdmin());
+    }
+
+    match /weeklySelections/{selId} {
+      allow read: if isSignedIn() && (
+        resource.data.householdId == userHousehold() || isAdmin()
+      );
+      allow create, update: if isSignedIn() && (
+        request.resource.data.householdId == userHousehold() &&
+        request.resource.data.userId == uid() &&
+        request.resource.data.selectedActionId in ['limit_convenience_2','limit_diningout_1','food_under_3000']
+      );
+      allow delete: if false;
+    }
+  }
+}

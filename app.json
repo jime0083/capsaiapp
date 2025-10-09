@@ -22,7 +22,10 @@
         "iosClientId": "587154500371-pm446nt466lcgckft6eff9anesh911np.apps.googleusercontent.com",
         "androidClientId": "__GOOGLE_ANDROID_CLIENT_ID__",
         "webClientId": "587154500371-fskfsltgngm4bm9ouu015u5jl54ueibu.apps.googleusercontent.com"
-      }
+      },
+      "adminEmails": [
+        "admin@example.com"
+      ]
     },
     "plugins": [
       "expo-asset"

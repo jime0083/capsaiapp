@@ -27,6 +27,8 @@ export interface Goal {
   currentAmount: number;
   deadline: Timestamp;
   imageUrl?: string;
+  monthlyIncome?: number; // 追加: 月の予算・収入
+  durationMonths?: number; // 追加: 目標期間（月）
 }
 
 export interface Budget {
@@ -38,7 +40,7 @@ export interface Budget {
 export interface Transaction {
   id: string;
   householdId: string;
-  userId: string;
+  uid: string; // ログインユーザーの uid
   date: string; // YYYY-MM-DD
   totalAmount: number;
   personalAmount: number;
@@ -51,6 +53,7 @@ export interface Transaction {
 export interface WeeklySelection {
   householdId: string;
   weekStart: string; // YYYY-MM-DD (Mon)
+  userId: string; // 追加: 対象ユーザーの uid
   selectedActionId: string;
   completed: boolean;
   completedBy?: string;

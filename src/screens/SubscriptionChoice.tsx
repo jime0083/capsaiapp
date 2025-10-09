@@ -31,10 +31,10 @@ const SubscriptionChoice: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background, padding: spacing.lg, justifyContent: 'center' },
   title: { color: colors.text, fontSize: 18, marginBottom: spacing.lg, textAlign: 'center' },
-  primary: { backgroundColor: colors.positive, borderRadius: 12, paddingVertical: spacing.md, alignItems: 'center' },
+  primary: { backgroundColor: colors.positive, borderRadius: 12, paddingVertical: spacing.md, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3 },
   primaryText: { color: '#000', fontWeight: '700' },
-  secondary: { marginTop: spacing.md, borderRadius: 12, paddingVertical: spacing.md, alignItems: 'center', borderWidth: 1, borderColor: '#fff' },
-  secondaryText: { color: colors.text, fontWeight: '600' },
+  secondary: { marginTop: spacing.md, borderRadius: 12, paddingVertical: spacing.md, alignItems: 'center', borderWidth: 1, borderColor: '#000', backgroundColor: '#FFFFFF', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3 },
+  secondaryText: { color: '#000', fontWeight: '600' },
 });
 
 export default SubscriptionChoice;
