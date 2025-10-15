@@ -143,9 +143,10 @@ const InsightScreen: React.FC = () => {
 
       <View style={{ height: spacing.lg }} />
       <View style={{ width: '100%', marginTop: spacing.lg }}>
-        {/* 背景内タイトル（LineChart は背景内タイトル未対応のため上にテキスト配置） */}
-        <Text style={[styles.graphHeader]}>期間比較（直近1年）</Text>
-        <LineChart data={line} height={220} />
+        <View style={{ borderWidth: 1, borderColor: '#E5E5EA', backgroundColor: '#F3F2F7', borderRadius: 12, paddingVertical: 8, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 }}>
+          <Text style={[styles.graphHeader]}>直近1年の出費</Text>
+          <LineChart data={line} height={220} />
+        </View>
       </View>
       <View style={{ height: 24 }} />
     </ScrollView>

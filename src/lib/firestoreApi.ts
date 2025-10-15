@@ -472,4 +472,50 @@ export async function getCarryOverHistory(
   return results;
 }
 
+// ===== MyPage 追加ユーティリティ =====
+export async function updateUserDisplayName(uid: string, displayName: string): Promise<void> {
+  const db = getFirebaseFirestore();
+  const ref = doc(db, 'users', uid);
+  await updateDoc(ref, { displayName, updatedAt: serverTimestamp() });
+}
+
+export async function updateGoalTitle(goalId: string, title: string): Promise<void> {
+  const db = getFirebaseFirestore();
+  const ref = doc(db, 'goals', goalId);
+  await updateDoc(ref, { title, updatedAt: serverTimestamp() });
+}
+
+export async function updateGoalPlan(goalId: string, targetAmount: number, months: number): Promise<void> {
+  const db = getFirebaseFirestore();
+  const ref = doc(db, 'goals', goalId);
+  const deadlineDate = new Date();
+  deadlineDate.setMonth(deadlineDate.getMonth() + months);
+  // 当該月の末日タイムスタンプ
+  const deadlineTs = new Date(deadlineDate.getFullYear(), deadlineDate.getMonth() + 1, 0).getTime();
+  await updateDoc(ref, {
+    targetAmount,
+    durationMonths: months,
+    deadline: deadlineTs,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+export async function getBadges(householdId: string): Promise<Badge[]> {
+  const db = getFirebaseFirestore();
+  const col = collection(db, 'badges');
+  const q = query(col, where('householdId', '==', householdId), orderBy('awardedAt', 'desc'));
+  const snap = await getDocs(q);
+  const items: Badge[] = [];
+  snap.forEach((d) => {
+    const b = d.data() as any;
+    items.push({ id: d.id, householdId: b.householdId, name: b.name, awardedAt: b.awardedAt });
+  });
+  return items;
+}
+
+export async function cancelSubscription(householdId: string): Promise<void> {
+  // 実際の解約フローは別途実装。ここではスタブ。
+  console.log('Cancel subscription requested for', householdId);
+}
+
 

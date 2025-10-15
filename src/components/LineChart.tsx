@@ -82,19 +82,20 @@ export const LineChart: React.FC<Props> = ({ data, height = 180 }) => {
 
 const styles = StyleSheet.create({
   container: {
-    borderWidth: 1,
-    borderColor: '#E5E5EA',
-    backgroundColor: '#F3F2F7',
-    borderRadius: 12,
+    // 背景・枠・影は外側カードで表現するため削除（透明化）
+    borderWidth: 0,
+    borderColor: 'transparent',
+    backgroundColor: 'transparent',
+    borderRadius: 0,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
     alignSelf: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.16,
-    shadowRadius: 12,
-    elevation: 6,
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   tooltip: {
     position: 'absolute',

@@ -136,8 +136,8 @@ const GoalsScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>現在の目標</Text>
-        <View style={styles.cardPrimary}>
+        <View style={styles.goalSection}>
+          <Text style={styles.title}>現在の目標</Text>
           <Text style={styles.name}>{goal?.title || '未設定'}</Text>
           <Text style={styles.sub}>目標額: {goal ? goal.targetAmount.toLocaleString() : 0} 円</Text>
           <Text style={styles.sub}>目標達成まであと: <Text style={styles.remainingBig}>{remainingAfterCarry.toLocaleString()}</Text> 円</Text>
@@ -147,32 +147,34 @@ const GoalsScreen: React.FC = () => {
           <Text style={styles.sub}>{percent}% 達成</Text>
         </View>
 
-        <Text style={styles.title}>積み上げ履歴</Text>
-        <View style={styles.cardPrimary}>
-          {carryLatest5.length === 0 ? (
-            <Text style={styles.sub}>まだ表示するデータがありません</Text>
-          ) : (
-            carryLatest5.map((c) => (
-              <Text key={c.month} style={styles.sub}>{`${c.month}: ${c.amount.toLocaleString()} 円`}</Text>
-            ))
-          )}
-          <TouchableOpacity style={styles.moreBtn} onPress={() => setShowMoreCarry(true)}>
-            <Text style={styles.moreBtnText}>もっと見る</Text>
-          </TouchableOpacity>
+        <View style={styles.sectionCarry}>
+          <Text style={styles.title}>積み上げ履歴</Text>
+          <View>
+            {carryLatest5.length === 0 ? (
+              <Text style={styles.sub}>まだ表示するデータがありません</Text>
+            ) : (
+              carryLatest5.map((c) => (
+                <Text key={c.month} style={styles.sub}>{`${c.month}: ${c.amount.toLocaleString()} 円`}</Text>
+              ))
+            )}
+            <TouchableOpacity style={styles.moreBtn} onPress={() => setShowMoreCarry(true)}>
+              <Text style={styles.moreBtnText}>もっと見る</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <Text style={styles.title}>ウィークリーアクション</Text>
-        <View style={styles.cardSelf}>
-          <Text style={styles.name}>自分のアクション</Text>
-          <Text style={styles.sub}>{actionLabel(myWeekly)}</Text>
-          {!myWeekly && (
-            <TouchableOpacity style={styles.primary} onPress={() => setShowWeeklyPicker(true)}>
-              <Text style={styles.primaryText}>ウィークリーアクションを設定</Text>
-            </TouchableOpacity>
-          )}
+        {/* ウィークリーアクション（タイトル・グレー背景なし） */}
+          <View style={styles.cardSelf}>
+            <Text style={[styles.name, { fontWeight: '700' }]}>自分のアクション</Text>
+            <Text style={styles.sub}>{actionLabel(myWeekly)}</Text>
+            {!myWeekly && (
+              <TouchableOpacity style={[styles.primary, { backgroundColor: '#FF0036' }]} onPress={() => setShowWeeklyPicker(true)}>
+                <Text style={styles.primaryText}>ウィークリーアクションを設定</Text>
+              </TouchableOpacity>
+            )}
         </View>
         <View style={styles.cardAction}>
-          <Text style={styles.name}>パートナーのアクション</Text>
+          <Text style={[styles.name, { fontWeight: '700' }]}>パートナーのアクション</Text>
           <Text style={styles.sub}>{actionLabel(partnerWeekly)}</Text>
         </View>
         <View style={{ height: 24 }} />
@@ -230,7 +232,7 @@ const GoalsScreen: React.FC = () => {
                 disabled={!selectedWeeklyId}
                 onPress={() => selectedWeeklyId && saveWeeklyAction(selectedWeeklyId)}
               >
-                <Text style={styles.primaryText}>今週のウィークリーアクションを決定する</Text>
+                <Text style={styles.primaryText}>設定</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -244,9 +246,12 @@ const GoalsScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg },
-  title: { color: colors.text, fontSize: 18, marginBottom: spacing.sm },
+  title: { color: colors.text, fontSize: 16, marginBottom: spacing.sm, fontWeight: '700' },
   card: { backgroundColor: colors.card, padding: spacing.md, borderRadius: 12, marginBottom: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 },
   cardPrimary: { backgroundColor: colors.card, padding: spacing.md, borderRadius: 12, marginBottom: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 },
+  goalSection: { backgroundColor: '#F3E9DF', borderRadius: 12, padding: spacing.md, marginBottom: spacing.md, borderWidth: 1, borderColor: '#E5E5EA', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 },
+  sectionGray: { backgroundColor: '#F3F2F7', borderRadius: 12, padding: spacing.md, marginBottom: spacing.md, borderWidth: 1, borderColor: '#E5E5EA', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 },
+  sectionCarry: { backgroundColor: '#DFEEE7', borderRadius: 12, padding: spacing.md, marginBottom: spacing.md, borderWidth: 1, borderColor: '#CFE2DB', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 10, elevation: 5 },
   cardAction: { backgroundColor: '#DDE9F7', padding: spacing.md, borderRadius: 12, marginBottom: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 },
   cardSelf: { backgroundColor: '#F3E0E4', padding: spacing.md, borderRadius: 12, marginBottom: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 },
   name: { color: '#000', fontSize: 16, marginBottom: spacing.sm },
