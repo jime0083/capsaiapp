@@ -2,9 +2,10 @@
 // Home: 最新目標、残額、今月の出費(共有出費)/予算残、用途別グラフ、記録ボタン
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { colors, spacing } from '../styles/theme';
 import TopBanner from '../components/TopBanner';
+import FadeInUp from '../components/FadeInUp';
 import PlaceholderChart from '../components/PlaceholderChart';
 import { getFirebaseAuth } from '../lib/firebase';
 import { getUserProfile, subscribeLatestGoal, subscribeUserTransactionsUnion } from '../lib/firestoreApi';
@@ -118,45 +119,71 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* 目標ヘッダを別要素として改行分離 */}
-      <TopBanner
-        title={goal?.title || '目標未設定'}
-        imageUrl={undefined}
-        remainingAmount={remainingToTarget}
-        monthsRemaining={monthsRemaining}
-      />
+      {/* 目標ヘッダを下からのフェードイン */}
+      <FadeInUp distance={20}>
+        <TopBanner
+          title={goal?.title || '目標未設定'}
+          imageUrl={undefined}
+          remainingAmount={remainingToTarget}
+          monthsRemaining={monthsRemaining}
+        />
+      </FadeInUp>
 
-      <View style={[styles.section, styles.rowGap]}> 
+      <FadeInUp delay={60} distance={20}>
+        <View style={[styles.section, styles.stack]}> 
         <View style={[styles.badge, { backgroundColor: '#F3E0E4' }]}> 
-          <Text style={styles.badgeTitleLight}>今月の出費</Text>
+          <View style={styles.rowAlignCenter}>
+            <Image source={require('../icons/wallet2.png')} style={styles.titleIcon} />
+            <Text style={styles.badgeTitleLight}>今月の出費</Text>
+          </View>
           <Text style={styles.badgeValueLarge}>
             <Text style={styles.valueSpendingNumber}>{thisMonthSpending.toLocaleString()}</Text>
             <Text style={styles.badgeUnit}> 円</Text>
           </Text>
         </View>
         <View style={[styles.badge, { backgroundColor: '#DDE9F7' }]}> 
-          <Text style={styles.badgeTitleLight}>今月の予算あと</Text>
+          <View style={styles.rowAlignCenter}>
+            <Image source={require('../icons/money4.png')} style={styles.titleIcon} />
+            <Text style={styles.badgeTitleLight}>今月の予算あと</Text>
+          </View>
           <Text style={styles.badgeValueLarge}>
             <Text style={styles.valueBudgetNumber}>{thisMonthBudgetLeft.toLocaleString()}</Text>
             <Text style={styles.badgeUnit}> 円</Text>
           </Text>
         </View>
-      </View>
+        </View>
+      </FadeInUp>
 
-      <View style={[styles.section, styles.rowGap, { marginTop: spacing.sm }]}> 
+      <FadeInUp delay={120} distance={20}>
+        <View style={[styles.section, styles.stack, { marginTop: spacing.sm }]}> 
         <View style={[styles.miniBadge, { backgroundColor: '#F3E9DF' }]}> 
-          <Text style={styles.miniTitle}>外食回数</Text>
+          <View style={styles.rowAlignCenter}>
+            <Image source={require('../icons/food2.png')} style={styles.titleIcon} />
+            <Text style={styles.miniTitle}>外食回数</Text>
+          </View>
           <Text style={[styles.miniValue, { color: '#FF7F00' }]}>{eatingOut.count} <Text style={styles.badgeUnit}>回</Text></Text>
         </View>
         <View style={[styles.miniBadge, { backgroundColor: '#DFEEE7' }]}> 
-          <Text style={styles.miniTitle}>コンビニ利用</Text>
+          <View style={styles.rowAlignCenter}>
+            <Image source={require('../icons/shop2.png')} style={styles.titleIcon} />
+            <Text style={styles.miniTitle}>コンビニ利用</Text>
+          </View>
           <Text style={[styles.miniValue, { color: '#0DFF00' }]}>{convenienceCount} <Text style={styles.badgeUnit}>回</Text></Text>
         </View>
-      </View>
+        </View>
+      </FadeInUp>
 
-      <View style={[styles.section, { marginTop: spacing.md, width: '100%' }]}> 
-        <PlaceholderChart type="pie" title="今月の支出内訳" height={220} data={pie.length ? pie : [{ key: 'なし', value: 1, color: '#444' }]} />
-      </View>
+      <FadeInUp delay={180} distance={20}>
+        <View style={[styles.section, { marginTop: spacing.md, width: '100%' }]}> 
+          <PlaceholderChart
+            type="pie"
+            title="今月の支出内訳"
+            titleIcon={require('../icons/data5.png')}
+            height={220}
+            data={pie.length ? pie : [{ key: 'なし', value: 1, color: '#444' }]}
+          />
+        </View>
+      </FadeInUp>
 
       
 
@@ -175,14 +202,17 @@ const styles = StyleSheet.create({
   sectionCenter: { marginTop: spacing.lg, alignItems: 'center' },
   sub: { color: colors.text, marginTop: 6, textAlign: 'left' },
   rowGap: { flexDirection: 'row', gap: 12, width: '100%' },
-  badge: { flex: 1, borderRadius: 12, padding: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
-  badgeTitleLight: { color: '#000', fontWeight: '700', marginBottom: 4 },
+  stack: { flexDirection: 'column', gap: 12, width: '100%' },
+  rowAlignCenter: { flexDirection: 'row', alignItems: 'flex-end', gap: 0, height: 18 },
+  badge: { width: '100%', borderRadius: 12, padding: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
+  badgeTitleLight: { color: '#000', fontWeight: '700', marginBottom: 0, fontSize: 14, lineHeight: 14 },
   badgeValueLarge: { color: '#000', fontSize: 21, fontWeight: '700' },
   badgeUnit: { color: '#000', fontSize: 14, fontWeight: '700' },
   valueSpendingNumber: { color: '#FF0036' },
   valueBudgetNumber: { color: '#0076FF' },
-  miniBadge: { flex: 1, borderRadius: 12, padding: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
-  miniTitle: { color: '#000', fontWeight: '700', marginBottom: 2 },
+  titleIcon: { width: 18, height: 18, marginRight: 0, borderRadius: 4 },
+  miniBadge: { width: '100%', borderRadius: 12, padding: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
+  miniTitle: { color: '#000', fontWeight: '700', marginBottom: 0, fontSize: 14, lineHeight: 14 },
   miniValue: { color: '#000', fontSize: 18, fontWeight: '700' },
   cta: { backgroundColor: colors.positive, paddingVertical: spacing.md, alignItems: 'center', borderRadius: 12, marginTop: spacing.lg },
   ctaText: { color: '#000', fontWeight: '700' },

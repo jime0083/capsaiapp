@@ -2,8 +2,8 @@
 // 円グラフの簡易実装（react-native-svg）
 
 import React, { useMemo, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors } from '../styles/theme';
+import { View, Text, StyleSheet, Image } from 'react-native';
+import { colors, spacing } from '../styles/theme';
 import Svg, { G, Path } from 'react-native-svg';
 
 type Slice = { key: string; value: number; color: string };
@@ -13,6 +13,7 @@ type Props = {
   data: Slice[]; // カテゴリ別の {key,value,color}
   height?: number;
   title?: string; // グラフタイトル（背景内上部）
+  titleIcon?: any; // 追加: タイトル左のアイコン(require資産)
 };
 
 function polarToCartesian(cx: number, cy: number, r: number, angle: number) {
@@ -27,10 +28,10 @@ function arcPath(cx: number, cy: number, r: number, startAngle: number, endAngle
   return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} 0 ${end.x} ${end.y} L ${cx} ${cy} Z`;
 }
 
-export const PlaceholderChart: React.FC<Props> = ({ data, height = 160, title }) => {
+export const PlaceholderChart: React.FC<Props> = ({ data, height = 160, title, titleIcon }) => {
   const total = useMemo(() => data.reduce((a, s) => a + (s.value || 0), 0) || 1, [data]);
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
-  const headerH = title ? 28 : 0;
+  const headerH = title ? 28 + spacing.md : 0; // タイトル行 + 上部パディング分
   const size = Math.max(0, height - headerH);
   const r = size / 2 - 8;
   const cx = size / 2;
@@ -41,7 +42,14 @@ export const PlaceholderChart: React.FC<Props> = ({ data, height = 160, title })
 
   return (
     <View style={[styles.container, { height, width: '100%' }]}> 
-      {title ? <Text style={styles.title}>{title}</Text> : null}
+      {title ? (
+        <View style={styles.titleRow}>
+          {titleIcon ? <Image source={titleIcon} style={styles.titleIcon} /> : null}
+          <View style={styles.titleTextWrap}>
+            <Text style={styles.title}>{title}</Text>
+          </View>
+        </View>
+      ) : null}
       <View style={[styles.chartWrap, { height: size, width: '100%' }]}> 
         <Svg height={size} width={size}>
           <G>
@@ -82,6 +90,8 @@ const styles = StyleSheet.create({
     borderColor: '#E5E5EA',
     backgroundColor: '#F3F2F7',
     borderRadius: 12,
+    paddingTop: spacing.md,
+    paddingHorizontal: spacing.md,
     alignItems: 'stretch',
     justifyContent: 'flex-start',
     position: 'relative',
@@ -95,10 +105,15 @@ const styles = StyleSheet.create({
   title: {
     alignSelf: 'flex-start',
     marginTop: 8,
-    marginLeft: 12,
+    marginLeft: 0,
     color: '#000',
     fontWeight: '700',
+    fontSize: 14,
+    lineHeight: 18,
   },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-end', height: 18 },
+  titleTextWrap: { justifyContent: 'flex-end', height: 18 },
+  titleIcon: { width: 18, height: 18, marginLeft: 0, marginRight: 0, borderRadius: 4 },
   chartWrap: {
     width: '100%',
     alignItems: 'center',

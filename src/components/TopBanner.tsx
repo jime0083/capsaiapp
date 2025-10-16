@@ -17,17 +17,21 @@ export const TopBanner: React.FC<Props> = ({ title, imageUrl, remainingAmount, m
     <View style={styles.card}>
       {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.image} /> : null}
       <View style={styles.textWrap}>
-        <Text style={styles.headLabel}>目標</Text>
+        <View style={styles.headRow}>
+          <Image source={require('../icons/goal.png')} style={styles.headIcon} />
+          <Text style={styles.headLabel}>目標</Text>
+        </View>
         <Text style={styles.title}>
-          <Text style={styles.titleWeak}>あと</Text>
-          <Text style={styles.titleStrong}>{monthsRemaining}</Text>
-          <Text style={styles.titleWeak}>ヶ月で</Text>
+          <Text style={styles.titleWeakBlack}>あと</Text>
+          <Text style={styles.titleStrongBlack}>{monthsRemaining}</Text>
+          <Text style={styles.titleWeakBlack}>ヶ月で</Text>
           {"\n"}
           <Text style={styles.titleStrong}>{title}</Text>
         </Text>
         <Text style={styles.remaining}>
-          目標達成まであと
-          <Text style={styles.remainingNumber}>{`${remainingAmount.toLocaleString()}円`}</Text>
+          目標達成まであと{"\n"}
+          <Text style={styles.remainingNumber}>{remainingAmount.toLocaleString()}</Text>
+          円
         </Text>
       </View>
     </View>
@@ -52,11 +56,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A1A1A',
   },
   textWrap: { flex: 1 },
+  headRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
+  headIcon: { width: 18, height: 18, marginRight: 6, borderRadius: 4 },
   headLabel: {
     color: '#000',
-    textDecorationLine: 'underline',
-    fontSize: Math.round(baseTitleSize * 0.7), // 見出しより30%小さく
-    marginBottom: 2,
+    textDecorationLine: 'none',
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 0,
   },
   title: {
     color: '#FDB523',
@@ -66,11 +73,20 @@ const styles = StyleSheet.create({
   },
   titleWeak: {
     color: '#FDB523',
-    fontSize: Math.round(baseTitleSize * 0.8),
+    fontSize: 18,
+  },
+  titleWeakBlack: {
+    color: '#000000',
+    fontSize: 18,
   },
   titleStrong: {
     color: '#FDB523',
-    fontSize: baseTitleSize,
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  titleStrongBlack: {
+    color: '#000000',
+    fontSize: 18,
     fontWeight: '700',
   },
   remaining: {
@@ -79,8 +95,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   remainingNumber: {
-    color: '#000000',
-    fontSize: 22,
+    color: '#FDB523',
+    fontSize: 24,
     fontWeight: '700',
   },
 });
