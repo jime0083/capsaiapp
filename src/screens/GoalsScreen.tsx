@@ -2,9 +2,10 @@
 // Goals: 現在の目標、履歴簡易リスト、ウィークリーアクション with CongratsEffect
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Modal, Alert, Image } from 'react-native';
 import { colors, spacing } from '../styles/theme';
 import CongratsEffect from '../components/CongratsEffect';
+import FadeInUp from '../components/FadeInUp';
 import { getFirebaseAuth } from '../lib/firebase';
 import { getUserProfile, getCarryOverHistory, getWeekStart, subscribeLatestGoal, subscribeUserTransactionsUnion, subscribeWeeklySelections, upsertWeeklySelection } from '../lib/firestoreApi';
 import { categoryColors } from '../mock/sampleData';
@@ -136,9 +137,15 @@ const GoalsScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.content}>
+        <FadeInUp delay={0} distance={20}>
         <View style={styles.goalSection}>
-          <Text style={styles.title}>現在の目標</Text>
-          <Text style={styles.name}>{goal?.title || '未設定'}</Text>
+          <View style={styles.titleRow}>
+            <Image source={require('../icons/flag.png')} style={styles.titleIcon} />
+            <View style={styles.titleTextWrap}>
+              <Text style={[styles.title, styles.headerTight]}>現在の目標</Text>
+            </View>
+          </View>
+          <Text style={styles.goalName}>{goal?.title || '未設定'}</Text>
           <Text style={styles.sub}>目標額: {goal ? goal.targetAmount.toLocaleString() : 0} 円</Text>
           <Text style={styles.sub}>目標達成まであと: <Text style={styles.remainingBig}>{remainingAfterCarry.toLocaleString()}</Text> 円</Text>
           <View style={styles.barBg}>
@@ -146,9 +153,16 @@ const GoalsScreen: React.FC = () => {
           </View>
           <Text style={styles.sub}>{percent}% 達成</Text>
         </View>
+        </FadeInUp>
 
+        <FadeInUp delay={60} distance={20}>
         <View style={styles.sectionCarry}>
-          <Text style={styles.title}>積み上げ履歴</Text>
+          <View style={styles.titleRow}>
+            <Image source={require('../icons/money6.png')} style={styles.titleIcon} />
+            <View style={styles.titleTextWrap}>
+              <Text style={[styles.title, styles.headerTight]}>積み上げ履歴</Text>
+            </View>
+          </View>
           <View>
             {carryLatest5.length === 0 ? (
               <Text style={styles.sub}>まだ表示するデータがありません</Text>
@@ -162,10 +176,17 @@ const GoalsScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         </View>
+        </FadeInUp>
 
         {/* ウィークリーアクション（タイトル・グレー背景なし） */}
+        <FadeInUp delay={120} distance={20}>
           <View style={styles.cardSelf}>
-            <Text style={[styles.name, { fontWeight: '700' }]}>自分のアクション</Text>
+            <View style={styles.titleRow}>
+              <Image source={require('../icons/run.png')} style={styles.titleIcon} />
+              <View style={styles.titleTextWrap}>
+                <Text style={[styles.name, { fontWeight: '700' }, styles.headerTight]}>自分のアクション</Text>
+              </View>
+            </View>
             <Text style={styles.sub}>{actionLabel(myWeekly)}</Text>
             {!myWeekly && (
               <TouchableOpacity style={[styles.primary, { backgroundColor: '#FF0036' }]} onPress={() => setShowWeeklyPicker(true)}>
@@ -173,10 +194,19 @@ const GoalsScreen: React.FC = () => {
               </TouchableOpacity>
             )}
         </View>
+        </FadeInUp>
+
+        <FadeInUp delay={180} distance={20}>
         <View style={styles.cardAction}>
-          <Text style={[styles.name, { fontWeight: '700' }]}>パートナーのアクション</Text>
+          <View style={styles.titleRow}>
+            <Image source={require('../icons/run2.png')} style={styles.titleIcon} />
+            <View style={styles.titleTextWrap}>
+              <Text style={[styles.name, { fontWeight: '700' }, styles.headerTight]}>パートナーのアクション</Text>
+            </View>
+          </View>
           <Text style={styles.sub}>{actionLabel(partnerWeekly)}</Text>
         </View>
+        </FadeInUp>
         <View style={{ height: 24 }} />
       </ScrollView>
       {/* キャリーオーバー履歴モーダル */}
@@ -247,6 +277,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg },
   title: { color: colors.text, fontSize: 16, marginBottom: spacing.sm, fontWeight: '700' },
+  headerTight: { marginBottom: 0, fontSize: 14, lineHeight: 18 },
+  goalName: { color: '#FFB202', fontSize: 20, fontWeight: '700', marginBottom: 0 },
   card: { backgroundColor: colors.card, padding: spacing.md, borderRadius: 12, marginBottom: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 },
   cardPrimary: { backgroundColor: colors.card, padding: spacing.md, borderRadius: 12, marginBottom: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 },
   goalSection: { backgroundColor: '#F3E9DF', borderRadius: 12, padding: spacing.md, marginBottom: spacing.md, borderWidth: 1, borderColor: '#E5E5EA', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 },
@@ -262,6 +294,9 @@ const styles = StyleSheet.create({
   action: { flex: 1, backgroundColor: colors.card, padding: spacing.md, borderRadius: 12, alignItems: 'center' },
   actionText: { color: colors.text },
   remainingBig: { fontSize: 14 * 1.2, fontWeight: '700', color: '#000' },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-end', height: 18 },
+  titleTextWrap: { justifyContent: 'flex-end', height: 18 },
+  titleIcon: { width: 18, height: 18, marginRight: 0, borderRadius: 4 },
   moreBtn: { marginTop: spacing.sm, alignSelf: 'flex-start', backgroundColor: colors.positive, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 },
   moreBtnText: { color: '#000', fontWeight: '700' },
   primary: { backgroundColor: colors.positive, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: 10, alignItems: 'center', alignSelf: 'flex-start' },

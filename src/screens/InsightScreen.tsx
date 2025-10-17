@@ -8,6 +8,7 @@ import PlaceholderChart from '../components/PlaceholderChart';
 import LineChart, { LinePoint } from '../components/LineChart';
 import { getFirebaseAuth } from '../lib/firebase';
 import { getUserProfile, subscribeUserTransactionsUnion, subscribeLatestGoal } from '../lib/firestoreApi';
+import FadeInUp from '../components/FadeInUp';
 import { categoryColors } from '../mock/sampleData';
 
 function toMonthString(value: any): string | null {
@@ -111,49 +112,55 @@ const InsightScreen: React.FC = () => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={{ width: '100%', marginTop: spacing.sm }}>
-        <PlaceholderChart
-          type="pie"
-          title="今月の支出内訳"
-          titleIcon={require('../icons/data5.png')}
-          height={220}
-          data={pie.length ? pie : [{ key: 'なし', value: 1, color: '#444' }]}
-        />
-      </View>
+      <FadeInUp distance={20}>
+        <View style={{ width: '100%', marginTop: spacing.sm }}>
+          <PlaceholderChart
+            type="pie"
+            title="今月の支出内訳"
+            titleIcon={require('../icons/data5.png')}
+            height={220}
+            data={pie.length ? pie : [{ key: 'なし', value: 1, color: '#444' }]}
+          />
+        </View>
+      </FadeInUp>
 
-      <View style={[styles.section, styles.stack]}> 
-        <View style={[styles.badge, { backgroundColor: '#F3E0E4' }]}> 
-          <View style={styles.rowAlignCenter}>
-            <Image source={require('../icons/wallet2.png')} style={styles.titleIcon} />
-            <Text style={styles.badgeTitleLight}>今月の出費</Text>
+      <FadeInUp delay={60} distance={20}>
+        <View style={[styles.section, styles.stack]}> 
+          <View style={[styles.badge, { backgroundColor: '#F3E0E4' }]}> 
+            <View style={styles.rowAlignCenter}>
+              <Image source={require('../icons/wallet2.png')} style={styles.titleIcon} />
+              <Text style={styles.badgeTitleLight}>今月の出費</Text>
+            </View>
+            <Text style={styles.badgeValueLarge}>
+              <Text style={styles.valueSpendingNumber}>{thisMonth.toLocaleString()}</Text>
+              <Text style={styles.badgeUnit}> 円</Text>
+            </Text>
           </View>
-          <Text style={styles.badgeValueLarge}>
-            <Text style={styles.valueSpendingNumber}>{thisMonth.toLocaleString()}</Text>
-            <Text style={styles.badgeUnit}> 円</Text>
-          </Text>
-        </View>
-        <View style={[styles.badge, { backgroundColor: '#DDE9F7' }]}> 
-          <View style={styles.rowAlignCenter}>
-            <Image source={require('../icons/money4.png')} style={styles.titleIcon} />
-            <Text style={styles.badgeTitleLight}>今月の予算あと</Text>
+          <View style={[styles.badge, { backgroundColor: '#DDE9F7' }]}> 
+            <View style={styles.rowAlignCenter}>
+              <Image source={require('../icons/money4.png')} style={styles.titleIcon} />
+              <Text style={styles.badgeTitleLight}>今月の予算あと</Text>
+            </View>
+            <Text style={styles.badgeValueLarge}>
+              <Text style={styles.valueBudgetNumber}>{thisMonthBudgetLeft.toLocaleString()}</Text>
+              <Text style={styles.badgeUnit}> 円</Text>
+            </Text>
           </View>
-          <Text style={styles.badgeValueLarge}>
-            <Text style={styles.valueBudgetNumber}>{thisMonthBudgetLeft.toLocaleString()}</Text>
-            <Text style={styles.badgeUnit}> 円</Text>
-          </Text>
         </View>
-      </View>
+      </FadeInUp>
 
       <View style={{ height: spacing.lg }} />
-      <View style={{ width: '100%', marginTop: spacing.lg }}>
-        <View style={{ borderWidth: 1, borderColor: '#E5E5EA', backgroundColor: '#F3F2F7', borderRadius: 12, paddingVertical: 8, paddingHorizontal: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 }}>
-          <View style={styles.titleRow}> 
-            <Image source={require('../icons/graph3.png')} style={styles.titleIcon} />
-            <Text style={[styles.graphHeader]}>直近1年の出費</Text>
+      <FadeInUp delay={120} distance={20}>
+        <View style={{ width: '100%', marginTop: spacing.lg }}>
+          <View style={{ borderWidth: 1, borderColor: '#E5E5EA', backgroundColor: '#F3F2F7', borderRadius: 12, paddingVertical: 8, paddingHorizontal: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 }}>
+            <View style={styles.titleRow}> 
+              <Image source={require('../icons/graph3.png')} style={styles.titleIcon} />
+              <Text style={[styles.graphHeader]}>直近1年の出費</Text>
+            </View>
+            <LineChart data={line} height={220} />
           </View>
-          <LineChart data={line} height={220} />
         </View>
-      </View>
+      </FadeInUp>
       <View style={{ height: 24 }} />
     </ScrollView>
   );
