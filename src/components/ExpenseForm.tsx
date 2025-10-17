@@ -5,6 +5,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity } from 'react-native';
 import { colors, spacing, radius } from '../styles/theme';
 import CategoryTag from './CategoryTag';
+import FadeInUp from './FadeInUp';
 
 type Props = {
   onSubmit: (params: {
@@ -53,36 +54,38 @@ export const ExpenseForm: React.FC<Props> = ({ onSubmit, categoryOptions }) => {
   };
 
   return (
-    <View>
-      <Text style={styles.label}>カテゴリ</Text>
-      <View style={styles.rowWrap}>
-        {categoryOptions.map((c) => (
-          <CategoryTag key={c.name} name={c.name} color={c.color} selected={category === c.name} onPress={() => setCategory(c.name)} />
-        ))}
-      </View>
+    <FadeInUp delay={0} distance={20}>
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>日付</Text>
+        <View style={styles.dateRow}>
+          <TouchableOpacity style={styles.stepBtn} onPress={() => adjustDate(-1)}>
+            <Text style={styles.stepText}>-</Text>
+          </TouchableOpacity>
+            <TextInput value={date} onChangeText={setDate} style={[styles.input, styles.dateInput]} placeholder="2025-01-01" placeholderTextColor={colors.muted} />
+          <TouchableOpacity style={styles.stepBtn} onPress={() => adjustDate(1)}>
+            <Text style={styles.stepText}>+</Text>
+          </TouchableOpacity>
+        </View>
 
-      <Text style={styles.label}>日付</Text>
-      <View style={styles.dateRow}>
-        <TouchableOpacity style={styles.stepBtn} onPress={() => adjustDate(-1)}>
-          <Text style={styles.stepText}>-</Text>
+        <Text style={[styles.cardTitle, { marginTop: spacing.md }]}>支出（円）</Text>
+        <TextInput value={totalAmount} onChangeText={(v) => setTotalAmount(onlyDigits(v))} keyboardType="number-pad" style={styles.input} />
+
+        <Text style={[styles.cardTitle, { marginTop: spacing.md }]}>差し引く個人出費（円）</Text>
+        <TextInput value={personalAmount} onChangeText={(v) => setPersonalAmount(onlyDigits(v))} keyboardType="number-pad" style={styles.input} />
+        <Text style={styles.helper}>保存される共有出費: {sharedAmount} 円</Text>
+
+        <Text style={[styles.cardTitle, { marginTop: spacing.md }]}>カテゴリ</Text>
+        <View style={styles.rowWrap}>
+          {categoryOptions.map((c) => (
+            <CategoryTag key={c.name} name={c.name} color={c.color} selected={category === c.name} onPress={() => setCategory(c.name)} />
+          ))}
+        </View>
+
+        <TouchableOpacity style={[styles.submit, { marginTop: spacing.md }]} onPress={submit} activeOpacity={0.8}>
+          <Text style={styles.submitText}>保存</Text>
         </TouchableOpacity>
-        <TextInput value={date} onChangeText={setDate} style={[styles.input, { flex: 1 }]} placeholder="2025-01-01" placeholderTextColor={colors.muted} />
-        <TouchableOpacity style={styles.stepBtn} onPress={() => adjustDate(1)}>
-          <Text style={styles.stepText}>+</Text>
-        </TouchableOpacity>
       </View>
-
-      <Text style={styles.label}>支出（円）</Text>
-      <TextInput value={totalAmount} onChangeText={(v) => setTotalAmount(onlyDigits(v))} keyboardType="number-pad" style={styles.input} />
-
-      <Text style={styles.label}>差し引く個人出費（円）</Text>
-      <TextInput value={personalAmount} onChangeText={(v) => setPersonalAmount(onlyDigits(v))} keyboardType="number-pad" style={styles.input} />
-      <Text style={styles.helper}>保存される共有出費: {sharedAmount} 円</Text>
-
-      <TouchableOpacity style={styles.submit} onPress={submit} activeOpacity={0.8}>
-        <Text style={styles.submitText}>保存</Text>
-      </TouchableOpacity>
-    </View>
+    </FadeInUp>
   );
 };
 
@@ -94,12 +97,17 @@ const styles = StyleSheet.create({
     borderColor: '#222',
     borderRadius: radius.md,
     color: '#000',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    height: 36,
+    fontSize: 14,
   },
-  dateRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  stepBtn: { borderWidth: 1, borderColor: '#333', borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  stepText: { color: '#000', fontWeight: '700' },
+  card: { backgroundColor: colors.card, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 },
+  cardTitle: { color: '#000', fontWeight: '700', marginBottom: spacing.xs },
+  dateRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  dateInput: { flexBasis: '70%', maxWidth: '70%', height: 36 },
+  stepBtn: { borderWidth: 1, borderColor: '#333', borderRadius: radius.md, paddingHorizontal: spacing.sm, paddingVertical: 6, height: 36, alignItems: 'center', justifyContent: 'center' },
+  stepText: { color: '#000', fontWeight: '700', fontSize: 16 },
   helper: { color: '#000', marginTop: spacing.xs },
   submit: {
     backgroundColor: colors.positive,

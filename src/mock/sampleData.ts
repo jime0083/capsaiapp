@@ -32,14 +32,18 @@ export const sampleTransactions: Transaction[] = Array.from({ length: 12 }).flat
 });
 
 export const categoryColors: Record<string, string> = {
-  '食費': '#5CC8FF',
+  // 交際費 と 食費 の色を交換
+  '食費': '#FF6B9A',
   '食費(コンビニ)': '#66D0FF',
-  '外食': '#4FBDF2',
-  '交際費': '#FF6B9A',
+  // 食費(コンビニ) と 趣味 の色を交換 → 下で趣味に '#66D0FF' を使うため、ここは維持
+  // 外食 と 保険 の色を交換
+  '外食': '#81E6D9',
+  '交際費': '#5CC8FF',
   '日用品': '#A0E7A5',
   '交通費': '#A29BFE',
   '服・美容': '#E7A0E2',
-  '趣味': '#FFD166',
+  // 上の入れ替えにより、趣味に 食費(コンビニ) の色を適用
+  '趣味': '#66D0FF',
   '教育・書籍': '#8ED1FC',
   '家賃': '#FFA8A8',
   '水道': '#66A6FF',
@@ -48,7 +52,7 @@ export const categoryColors: Record<string, string> = {
   'スマホ': '#A0AEC0',
   'ネット': '#9AE6B4',
   '医療': '#F4A261',
-  '保険': '#81E6D9',
+  '保険': '#4FBDF2',
   '税金': '#F6AD55',
   'サブスク': '#C3DAFE',
   'その他': '#9E9E9E',
