@@ -10,11 +10,12 @@ type Props = {
   imageUrl?: string;
   remainingAmount: number;
   monthsRemaining: number;
+  backgroundColor?: string;
 };
 
-export const TopBanner: React.FC<Props> = ({ title, imageUrl, remainingAmount, monthsRemaining }) => {
+export const TopBanner: React.FC<Props> = ({ title, imageUrl, remainingAmount, monthsRemaining, backgroundColor }) => {
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, backgroundColor ? { backgroundColor } : null]}>
       {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.image} /> : null}
       <View style={styles.textWrap}>
         <View style={styles.headRow}>

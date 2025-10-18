@@ -156,6 +156,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           imageUrl={undefined}
           remainingAmount={remainingToTarget}
           monthsRemaining={monthsRemaining}
+          backgroundColor={'#FFE385'}
         />
       </FadeInUp>
 
