@@ -500,6 +500,55 @@ export async function updateGoalPlan(goalId: string, targetAmount: number, month
   });
 }
 
+export async function updateGoalDeadline(goalId: string, deadlineTs: number): Promise<void> {
+  const db = getFirebaseFirestore();
+  const ref = doc(db, 'goals', goalId);
+  await updateDoc(ref, {
+    deadline: deadlineTs,
+    updatedAt: serverTimestamp(),
+  });
+}
+
+// ===== Weekly cooking counters =====
+export async function upsertCookingEvent(params: {
+  householdId: string;
+  weekStart: string; // YYYY-MM-DD (Mon)
+  date: string; // YYYY-MM-DD
+  kind: 'dinner' | 'lunch';
+  userId?: string;
+}): Promise<void> {
+  const db = getFirebaseFirestore();
+  const id = `${params.householdId}_${params.weekStart}_${params.kind}_${params.date}`;
+  const ref = doc(collection(db, 'weeklyCooking'), id);
+  await setDoc(ref, {
+    householdId: params.householdId,
+    weekStart: params.weekStart,
+    date: params.date,
+    kind: params.kind,
+    userId: params.userId || null,
+    createdAt: serverTimestamp(),
+  }, { merge: true });
+}
+
+export function subscribeWeeklyCooking(
+  householdId: string,
+  weekStart: string,
+  onChange: (events: Array<{ kind: 'dinner' | 'lunch'; date: string }>) => void,
+): () => void {
+  const db = getFirebaseFirestore();
+  const col = collection(db, 'weeklyCooking');
+  const q1 = query(col, where('householdId', '==', householdId), where('weekStart', '==', weekStart));
+  const unsub = onSnapshot(q1, (snap) => {
+    const items: Array<{ kind: 'dinner' | 'lunch'; date: string }> = [];
+    snap.forEach((d) => {
+      const data = d.data() as any;
+      items.push({ kind: data.kind, date: data.date });
+    });
+    onChange(items);
+  });
+  return unsub;
+}
+
 export async function getBadges(householdId: string): Promise<Badge[]> {
   const db = getFirebaseFirestore();
   const col = collection(db, 'badges');

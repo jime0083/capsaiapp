@@ -31,6 +31,7 @@ const BottomTabs = () => {
         )
       }} />
       <Tab.Screen name="Goals" component={GoalsScreen} options={{
+        tabBarLabel: 'Mission',
         tabBarIcon: ({ size, color }) => (
           <Image source={require('../icons/goal2.png')} style={{ width: size, height: size, tintColor: color }} />
         )

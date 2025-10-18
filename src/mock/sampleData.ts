@@ -32,12 +32,11 @@ export const sampleTransactions: Transaction[] = Array.from({ length: 12 }).flat
 });
 
 export const categoryColors: Record<string, string> = {
-  // 交際費 と 食費 の色を交換
+  // 交際費 と 食費 の色を交換済み
   '食費': '#FF6B9A',
   '食費(コンビニ)': '#66D0FF',
-  // 食費(コンビニ) と 趣味 の色を交換 → 下で趣味に '#66D0FF' を使うため、ここは維持
-  // 外食 と 保険 の色を交換
-  '外食': '#81E6D9',
+  // 外食 を 食費(外食) にリネーム（色は従来の外食色を踏襲）
+  '食費(外食)': '#81E6D9',
   '交際費': '#5CC8FF',
   '日用品': '#A0E7A5',
   '交通費': '#A29BFE',

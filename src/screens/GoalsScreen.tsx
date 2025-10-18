@@ -139,6 +139,7 @@ const GoalsScreen: React.FC = () => {
       <ScrollView contentContainerStyle={styles.content}>
         <FadeInUp delay={0} distance={20}>
         <View style={styles.goalSection}>
+          <View style={[styles.leftStripe, { backgroundColor: '#F3E9DF' }]} />
           <View style={styles.titleRow}>
             <Image source={require('../icons/flag.png')} style={styles.titleIcon} />
             <View style={styles.titleTextWrap}>
@@ -157,6 +158,7 @@ const GoalsScreen: React.FC = () => {
 
         <FadeInUp delay={60} distance={20}>
         <View style={styles.sectionCarry}>
+          <View style={[styles.leftStripe, { backgroundColor: '#DFEEE7' }]} />
           <View style={styles.titleRow}>
             <Image source={require('../icons/money6.png')} style={styles.titleIcon} />
             <View style={styles.titleTextWrap}>
@@ -181,6 +183,7 @@ const GoalsScreen: React.FC = () => {
         {/* ウィークリーアクション（タイトル・グレー背景なし） */}
         <FadeInUp delay={120} distance={20}>
           <View style={styles.cardSelf}>
+            <View style={[styles.leftStripe, { backgroundColor: '#F3E0E4' }]} />
             <View style={styles.titleRow}>
               <Image source={require('../icons/run.png')} style={styles.titleIcon} />
               <View style={styles.titleTextWrap}>
@@ -189,7 +192,7 @@ const GoalsScreen: React.FC = () => {
             </View>
             <Text style={styles.sub}>{actionLabel(myWeekly)}</Text>
             {!myWeekly && (
-              <TouchableOpacity style={[styles.primary, { backgroundColor: '#FF0036' }]} onPress={() => setShowWeeklyPicker(true)}>
+              <TouchableOpacity style={[styles.primary, { backgroundColor: '#FFA8A8' }]} onPress={() => setShowWeeklyPicker(true)}>
                 <Text style={styles.primaryText}>ウィークリーアクションを設定</Text>
               </TouchableOpacity>
             )}
@@ -198,6 +201,7 @@ const GoalsScreen: React.FC = () => {
 
         <FadeInUp delay={180} distance={20}>
         <View style={styles.cardAction}>
+          <View style={[styles.leftStripe, { backgroundColor: '#DDE9F7' }]} />
           <View style={styles.titleRow}>
             <Image source={require('../icons/run2.png')} style={styles.titleIcon} />
             <View style={styles.titleTextWrap}>
@@ -281,11 +285,11 @@ const styles = StyleSheet.create({
   goalName: { color: '#FFB202', fontSize: 20, fontWeight: '700', marginBottom: 0 },
   card: { backgroundColor: colors.card, padding: spacing.md, borderRadius: 12, marginBottom: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 },
   cardPrimary: { backgroundColor: colors.card, padding: spacing.md, borderRadius: 12, marginBottom: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 },
-  goalSection: { backgroundColor: '#F3E9DF', borderRadius: 12, padding: spacing.md, marginBottom: spacing.md, borderWidth: 1, borderColor: '#E5E5EA', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 },
-  sectionGray: { backgroundColor: '#F3F2F7', borderRadius: 12, padding: spacing.md, marginBottom: spacing.md, borderWidth: 1, borderColor: '#E5E5EA', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 },
-  sectionCarry: { backgroundColor: '#DFEEE7', borderRadius: 12, padding: spacing.md, marginBottom: spacing.md, borderWidth: 1, borderColor: '#CFE2DB', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 10, elevation: 5 },
-  cardAction: { backgroundColor: '#DDE9F7', padding: spacing.md, borderRadius: 12, marginBottom: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 },
-  cardSelf: { backgroundColor: '#F3E0E4', padding: spacing.md, borderRadius: 12, marginBottom: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 },
+  goalSection: { backgroundColor: '#F3F2F7', borderRadius: 12, padding: spacing.md, paddingLeft: 24, marginBottom: spacing.md, borderWidth: 1, borderColor: '#E5E5EA', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6, position: 'relative' },
+  sectionGray: { backgroundColor: '#F3F2F7', borderRadius: 12, padding: spacing.md, paddingLeft: 24, marginBottom: spacing.md, borderWidth: 1, borderColor: '#E5E5EA', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6, position: 'relative' },
+  sectionCarry: { backgroundColor: '#F3F2F7', borderRadius: 12, padding: spacing.md, paddingLeft: 24, marginBottom: spacing.md, borderWidth: 1, borderColor: '#CFE2DB', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 10, elevation: 5, position: 'relative' },
+  cardAction: { backgroundColor: '#F3F2F7', padding: spacing.md, paddingLeft: 24, borderRadius: 12, marginBottom: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6, position: 'relative' },
+  cardSelf: { backgroundColor: '#F3F2F7', padding: spacing.md, paddingLeft: 24, borderRadius: 12, marginBottom: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6, position: 'relative' },
   name: { color: '#000', fontSize: 16, marginBottom: spacing.sm },
   barBg: { height: 10, backgroundColor: '#EEE', borderRadius: 6, overflow: 'hidden' },
   barFill: { height: 10, backgroundColor: colors.positive },
@@ -297,6 +301,7 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: 'row', alignItems: 'flex-end', height: 18 },
   titleTextWrap: { justifyContent: 'flex-end', height: 18 },
   titleIcon: { width: 18, height: 18, marginRight: 0, borderRadius: 4 },
+  leftStripe: { position: 'absolute', left: 8, top: 10, bottom: 10, width: 6, borderRadius: 4 },
   moreBtn: { marginTop: spacing.sm, alignSelf: 'flex-start', backgroundColor: colors.positive, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 },
   moreBtnText: { color: '#000', fontWeight: '700' },
   primary: { backgroundColor: colors.positive, paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: 10, alignItems: 'center', alignSelf: 'flex-start' },

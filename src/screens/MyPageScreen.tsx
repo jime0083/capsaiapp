@@ -5,7 +5,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Modal, TextInput } from 'react-native';
 import { colors, spacing } from '../styles/theme';
 import { getFirebaseAuth } from '../lib/firebase';
-import { getUserProfile, getLatestGoal, getBadges, updateUserDisplayName, updateGoalTitle, updateGoalPlan, cancelSubscription } from '../lib/firestoreApi';
+import { getUserProfile, getLatestGoal, getBadges, updateUserDisplayName, updateGoalTitle, updateGoalPlan, cancelSubscription, updateGoalDeadline } from '../lib/firestoreApi';
+import FadeInUp from '../components/FadeInUp';
+import { Picker } from '@react-native-picker/picker';
 
 const MyPageScreen: React.FC = () => {
   const [displayName, setDisplayName] = useState<string>('');
@@ -19,6 +21,11 @@ const MyPageScreen: React.FC = () => {
   const [showSubs, setShowSubs] = useState(false);
   const [targetAmount, setTargetAmount] = useState<string>('');
   const [months, setMonths] = useState<string>('');
+  const [deadlineTs, setDeadlineTs] = useState<number | null>(null);
+  const [showDeadlinePicker, setShowDeadlinePicker] = useState(false);
+  const [pickYear, setPickYear] = useState<number>(new Date().getFullYear());
+  const [pickMonth, setPickMonth] = useState<number>(new Date().getMonth() + 1);
+  const [pickDay, setPickDay] = useState<number>(new Date().getDate());
 
   useEffect(() => {
     (async () => {
@@ -46,6 +53,13 @@ const MyPageScreen: React.FC = () => {
             setGoalTitle(g.title);
             if (g.targetAmount) setTargetAmount(String(g.targetAmount));
             if (g.durationMonths) setMonths(String(g.durationMonths));
+            if (g.deadline) {
+              setDeadlineTs(Number(g.deadline));
+              const d = new Date(Number(g.deadline));
+              setPickYear(d.getFullYear());
+              setPickMonth(d.getMonth() + 1);
+              setPickDay(d.getDate());
+            }
           }
           const bs = await getBadges(householdId);
           setBadges(bs.map(b => ({ id: b.id, name: b.name, awardedAt: b.awardedAt })));
@@ -60,37 +74,43 @@ const MyPageScreen: React.FC = () => {
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* 上部情報カード */}
-      <View style={styles.headerCard}>
-        <Text style={styles.name}>{displayName}</Text>
-        <Text style={styles.sub}>ユーザー識別: {userTypeLabel}</Text>
-        <Text style={styles.sub}>使用日数: {days} 日</Text>
-        <Text style={styles.sub}>ペアユーザー: {pairUsers.length ? `${pairUsers.length}人` : '未設定'}</Text>
-      </View>
+      <FadeInUp delay={0} distance={20}>
+        <View style={styles.headerCard}>
+          <Text style={styles.name}>{displayName}</Text>
+          <Text style={styles.sub}>ユーザー識別: {userTypeLabel}</Text>
+          <Text style={styles.sub}>使用日数: {days} 日</Text>
+          <Text style={styles.sub}>ペアユーザー: {pairUsers.length ? `${pairUsers.length}人` : '未設定'}</Text>
+        </View>
+      </FadeInUp>
 
       {/* バッジセクション */}
-      <View style={styles.sectionGray}>
-        <Text style={styles.title}>獲得バッジ</Text>
-        <View style={{ gap: 8 }}>
-          {badges.length === 0 ? (
-            <Text style={styles.sub}>まだバッジがありません</Text>
-          ) : badges.map((b) => (
-            <Text key={b.id} style={styles.sub}>🏅 {b.name}</Text>
-          ))}
+      <FadeInUp delay={60} distance={20}>
+        <View style={styles.sectionGray}>
+          <Text style={styles.title}>獲得バッジ</Text>
+          <View style={{ gap: 8 }}>
+            {badges.length === 0 ? (
+              <Text style={styles.sub}>まだバッジがありません</Text>
+            ) : badges.map((b) => (
+              <Text key={b.id} style={styles.sub}>🏅 {b.name}</Text>
+            ))}
+          </View>
         </View>
-      </View>
+      </FadeInUp>
 
       {/* アクションボタン */}
-      <View style={styles.row}>
-        <TouchableOpacity style={styles.btn} onPress={() => setShowEdit(true)}>
-          <Text style={styles.btnText}>プロフィール編集</Text>
-        </TouchableOpacity>
-        {isOwner ? (
-          <TouchableOpacity style={styles.btn} onPress={() => setShowSubs(true)}>
-            <Text style={styles.btnText}>サブスク管理</Text>
+      <FadeInUp delay={120} distance={20}>
+        <View style={styles.row}>
+          <TouchableOpacity style={styles.btn} onPress={() => setShowEdit(true)}>
+            <Text style={styles.btnText}>プロフィール編集</Text>
           </TouchableOpacity>
-        ) : null}
-      </View>
-      <View style={{ height: 24 }} />
+          {isOwner ? (
+            <TouchableOpacity style={styles.btn} onPress={() => setShowSubs(true)}>
+              <Text style={styles.btnText}>サブスク管理</Text>
+            </TouchableOpacity>
+          ) : null}
+        </View>
+        <View style={{ height: 24 }} />
+      </FadeInUp>
 
       {/* プロフィール編集モーダル */}
       <Modal visible={showEdit} transparent animationType="fade" onRequestClose={() => setShowEdit(false)}>
@@ -103,8 +123,10 @@ const MyPageScreen: React.FC = () => {
             <TextInput style={styles.input} value={goalTitle} onChangeText={setGoalTitle} />
             <Text style={[styles.sub, { marginTop: 12 }]}>目標金額（円）</Text>
             <TextInput style={styles.input} value={targetAmount} onChangeText={setTargetAmount} keyboardType="numeric" />
-            <Text style={[styles.sub, { marginTop: 12 }]}>目標期間（ヶ月）</Text>
-            <TextInput style={styles.input} value={months} onChangeText={setMonths} keyboardType="numeric" />
+            <Text style={[styles.sub, { marginTop: 12 }]}>目標期限（日付）</Text>
+            <TouchableOpacity style={[styles.input, { justifyContent: 'center' }]} onPress={() => setShowDeadlinePicker(true)}>
+              <Text style={{ color: '#000' }}>{deadlineTs ? new Date(deadlineTs).toISOString().slice(0,10) : '未設定 - タップで選択'}</Text>
+            </TouchableOpacity>
             <View style={styles.row}>
               <TouchableOpacity style={[styles.secondary, { flex: 1 }]} onPress={() => setShowEdit(false)}>
                 <Text style={styles.secondaryText}>閉じる</Text>
@@ -116,10 +138,8 @@ const MyPageScreen: React.FC = () => {
                     const uid = getFirebaseAuth().currentUser?.uid;
                     if (uid) await updateUserDisplayName(uid, displayName);
                     if (goalId) await updateGoalTitle(goalId, goalTitle);
-                    if (goalId) {
-                      const t = Number(targetAmount);
-                      const m = Number(months);
-                      if (t && m) await updateGoalPlan(goalId, t, m);
+                    if (goalId && deadlineTs) {
+                      await updateGoalDeadline(goalId, deadlineTs);
                     }
                     setShowEdit(false);
                     Alert.alert('保存しました');
@@ -127,6 +147,52 @@ const MyPageScreen: React.FC = () => {
                 }}
               >
                 <Text style={styles.primaryText}>保存</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      {/* 期限選択モーダル */}
+      <Modal visible={showDeadlinePicker} transparent animationType="fade" onRequestClose={() => setShowDeadlinePicker(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.title}>目標期限を選択</Text>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <View style={{ flex: 1, backgroundColor: '#000', borderRadius: 8, overflow: 'hidden' }}>
+                <Picker selectedValue={pickYear} onValueChange={(v) => setPickYear(Number(v))} dropdownIconColor="#fff">
+                  {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + i).map(y => (
+                    <Picker.Item key={y} label={`${y}`} value={y} color="#fff" />
+                  ))}
+                </Picker>
+              </View>
+              <View style={{ flex: 1, backgroundColor: '#000', borderRadius: 8, overflow: 'hidden' }}>
+                <Picker selectedValue={pickMonth} onValueChange={(v) => setPickMonth(Number(v))} dropdownIconColor="#fff">
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                    <Picker.Item key={m} label={`${m}`} value={m} color="#fff" />
+                  ))}
+                </Picker>
+              </View>
+              <View style={{ flex: 1, backgroundColor: '#000', borderRadius: 8, overflow: 'hidden' }}>
+                <Picker selectedValue={pickDay} onValueChange={(v) => setPickDay(Number(v))} dropdownIconColor="#fff">
+                  {Array.from({ length: new Date(pickYear, pickMonth, 0).getDate() }, (_, i) => i + 1).map(d => (
+                    <Picker.Item key={d} label={`${d}`} value={d} color="#fff" />
+                  ))}
+                </Picker>
+              </View>
+            </View>
+            <View style={styles.row}>
+              <TouchableOpacity style={[styles.secondary, { flex: 1 }]} onPress={() => setShowDeadlinePicker(false)}>
+                <Text style={styles.secondaryText}>閉じる</Text>
+              </TouchableOpacity>
+              <View style={{ width: 12 }} />
+              <TouchableOpacity style={[styles.primary, { flex: 1 }]} onPress={() => {
+                const dt = new Date(pickYear, pickMonth - 1, pickDay);
+                // 月末にそろえる
+                const last = new Date(dt.getFullYear(), dt.getMonth() + 1, 0);
+                setDeadlineTs(last.getTime());
+                setShowDeadlinePicker(false);
+              }}>
+                <Text style={styles.primaryText}>決定</Text>
               </TouchableOpacity>
             </View>
           </View>

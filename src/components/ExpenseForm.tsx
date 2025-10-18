@@ -76,9 +76,12 @@ export const ExpenseForm: React.FC<Props> = ({ onSubmit, categoryOptions }) => {
 
         <Text style={[styles.cardTitle, { marginTop: spacing.md }]}>カテゴリ</Text>
         <View style={styles.rowWrap}>
-          {categoryOptions.map((c) => (
-            <CategoryTag key={c.name} name={c.name} color={c.color} selected={category === c.name} onPress={() => setCategory(c.name)} />
-          ))}
+          {categoryOptions.map((c) => {
+            const name = c.name === '外食' ? '食費(外食)' : c.name;
+            return (
+              <CategoryTag key={name} name={name} color={c.color} selected={category === name} onPress={() => setCategory(name)} />
+            );
+          })}
         </View>
 
         <TouchableOpacity style={[styles.submit, { marginTop: spacing.md }]} onPress={submit} activeOpacity={0.8}>

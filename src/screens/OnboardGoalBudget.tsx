@@ -23,14 +23,18 @@ const OnboardGoalBudget: React.FC<Props> = ({ navigation }) => {
   const [title, setTitle] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
   const [monthlyIncome, setMonthlyIncome] = useState('');
-  const [months, setMonths] = useState(12);
+  const [pickYear, setPickYear] = useState<number>(new Date().getFullYear());
+  const [pickMonth, setPickMonth] = useState<number>(new Date().getMonth() + 1);
+  const [pickDay, setPickDay] = useState<number>(new Date().getDate());
 
-  const monthOptions = useMemo(() => Array.from({ length: 24 }, (_, i) => i + 1), []);
+  const yearOptions = useMemo(() => Array.from({ length: 10 }, (_, i) => new Date().getFullYear() + i), []);
+  const monthOptions = useMemo(() => Array.from({ length: 12 }, (_, i) => i + 1), []);
+  const dayOptions = useMemo(() => Array.from({ length: new Date(pickYear, pickMonth, 0).getDate() }, (_, i) => i + 1), [pickYear, pickMonth]);
 
   const onSubmit = async () => {
     const t = Number(targetAmount);
     const mi = Number(monthlyIncome);
-    if (!title || !t || !mi || !months) {
+    if (!title || !t || !mi) {
       Alert.alert('入力エラー', '必須項目を入力してください');
       return;
     }
@@ -45,8 +49,7 @@ const OnboardGoalBudget: React.FC<Props> = ({ navigation }) => {
     const householdId = (profile && (profile['householdId'] as string)) || `hh-${uid}`;
     await ensureUserHousehold(uid, householdId);
 
-    const deadlineDate = new Date();
-    deadlineDate.setMonth(deadlineDate.getMonth() + months);
+    const deadlineDate = new Date(pickYear, pickMonth - 1, pickDay);
     const deadlineTs = new Date(deadlineDate.getFullYear(), deadlineDate.getMonth() + 1, 0).getTime();
 
     const goal: Goal = {
@@ -57,7 +60,7 @@ const OnboardGoalBudget: React.FC<Props> = ({ navigation }) => {
       currentAmount: 0,
       deadline: deadlineTs,
       monthlyIncome: mi,
-      durationMonths: months,
+      durationMonths: undefined,
     };
 
     await createGoal(goal);
@@ -93,13 +96,29 @@ const OnboardGoalBudget: React.FC<Props> = ({ navigation }) => {
       </FadeInUp>
 
       <FadeInUp delay={240}>
-        <Text style={styles.label}>目標期間（ヶ月）</Text>
-        <View style={styles.pickerBox}>
-          <Picker selectedValue={months} onValueChange={(v) => setMonths(Number(v))} dropdownIconColor="#fff">
-            {monthOptions.map((m) => (
-              <Picker.Item key={m} label={`${m}`} value={m} color="#fff" />
-            ))}
-          </Picker>
+        <Text style={styles.label}>目標期限（日付）</Text>
+        <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={styles.pickerBox}>
+            <Picker selectedValue={pickYear} onValueChange={(v) => setPickYear(Number(v))} dropdownIconColor="#fff">
+              {yearOptions.map((y) => (
+                <Picker.Item key={y} label={`${y}`} value={y} color="#fff" />
+              ))}
+            </Picker>
+          </View>
+          <View style={styles.pickerBox}>
+            <Picker selectedValue={pickMonth} onValueChange={(v) => setPickMonth(Number(v))} dropdownIconColor="#fff">
+              {monthOptions.map((m) => (
+                <Picker.Item key={m} label={`${m}`} value={m} color="#fff" />
+              ))}
+            </Picker>
+          </View>
+          <View style={styles.pickerBox}>
+            <Picker selectedValue={pickDay} onValueChange={(v) => setPickDay(Number(v))} dropdownIconColor="#fff">
+              {dayOptions.map((d) => (
+                <Picker.Item key={d} label={`${d}`} value={d} color="#fff" />
+              ))}
+            </Picker>
+          </View>
         </View>
       </FadeInUp>
 

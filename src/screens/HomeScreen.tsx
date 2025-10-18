@@ -8,7 +8,7 @@ import TopBanner from '../components/TopBanner';
 import FadeInUp from '../components/FadeInUp';
 import PlaceholderChart from '../components/PlaceholderChart';
 import { getFirebaseAuth } from '../lib/firebase';
-import { getUserProfile, subscribeLatestGoal, subscribeUserTransactionsUnion } from '../lib/firestoreApi';
+import { getUserProfile, subscribeLatestGoal, subscribeUserTransactionsUnion, upsertCookingEvent, subscribeWeeklyCooking } from '../lib/firestoreApi';
 import { useIsFocused } from '@react-navigation/native';
 import { categoryColors } from '../mock/sampleData';
 
@@ -54,11 +54,27 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const [pie, setPie] = useState<{ key: string; value: number; color: string }[]>([]);
   const [eatingOut, setEatingOut] = useState<{ count: number; total: number }>({ count: 0, total: 0 });
   const [convenienceCount, setConvenienceCount] = useState<number>(0);
+  const [foodMonthTotal, setFoodMonthTotal] = useState<number>(0);
+  const [dinnerCookCount, setDinnerCookCount] = useState<number>(0);
+  const [lunchCookCount, setLunchCookCount] = useState<number>(0);
+  const [dinnerDaysThisWeek, setDinnerDaysThisWeek] = useState<string[]>([]);
+  const [lunchDaysThisWeek, setLunchDaysThisWeek] = useState<string[]>([]);
   const isFocused = useIsFocused();
+  const weekStart = useMemo(() => {
+    const d = new Date();
+    const day = (d.getDay() + 6) % 7; // Mon=0
+    d.setHours(0,0,0,0);
+    d.setDate(d.getDate() - day);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dd}`;
+  }, []);
 
   useEffect(() => {
     let unsubGoal: (() => void) | null = null;
     let unsubUserTx: (() => void) | null = null;
+    let unsubCook: (() => void) | null = null;
 
     const start = async () => {
       const auth = getFirebaseAuth();
@@ -93,17 +109,31 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
         });
         const pieData = Array.from(byCat.entries()).map(([key, value]) => ({ key, value, color: categoryColors[key] || '#888' }));
         setPie(pieData);
-        const eating = thisMonth.filter((t) => t.category === '外食');
+        const eating = thisMonth.filter((t) => t.category === '食費(外食)');
         const count = eating.length;
         const total = eating.reduce((a, t) => a + (Number(t.sharedAmount) || 0), 0);
         setEatingOut({ count, total });
-        const convenience = thisMonth.filter((t) => t.category === 'コンビニ');
+        const convenience = thisMonth.filter((t) => t.category === '食費(コンビニ)');
         setConvenienceCount(convenience.length);
+        const monthFoodTotal = thisMonth
+          .filter((t) => ['食費', '食費(コンビニ)', '食費(外食)'].includes(String(t.category)))
+          .reduce((a, t) => a + (Number(t.sharedAmount) || 0), 0);
+        setFoodMonthTotal(monthFoodTotal);
+      });
+
+      // Weekly cooking events
+      unsubCook = subscribeWeeklyCooking(householdId, weekStart, (events) => {
+        const dinnerDays = Array.from(new Set(events.filter(e => e.kind === 'dinner').map(e => e.date)));
+        const lunchDays = Array.from(new Set(events.filter(e => e.kind === 'lunch').map(e => e.date)));
+        setDinnerDaysThisWeek(dinnerDays);
+        setLunchDaysThisWeek(lunchDays);
+        setDinnerCookCount(dinnerDays.length);
+        setLunchCookCount(lunchDays.length);
       });
     };
 
     if (isFocused) start();
-    return () => { if (unsubGoal) unsubGoal(); if (unsubUserTx) unsubUserTx(); };
+    return () => { if (unsubGoal) unsubGoal(); if (unsubUserTx) unsubUserTx(); if (unsubCook) unsubCook(); };
   }, [isFocused]);
 
   const remainingToTarget = useMemo(() => !goal ? 0 : Math.max(goal.targetAmount - goal.currentAmount, 0), [goal]);
@@ -131,9 +161,10 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
       <FadeInUp delay={60} distance={20}>
         <View style={[styles.section, styles.stack]}> 
-        <View style={[styles.badge, { backgroundColor: '#F3E0E4' }]}> 
+        <View style={[styles.badge, { backgroundColor: '#F3F2F7' }]}> 
+          <View style={[styles.leftStripe, { backgroundColor: '#F3E0E4' }]} />
           <View style={styles.rowAlignCenter}>
-            <Image source={require('../icons/wallet2.png')} style={styles.titleIcon} />
+            <Image source={require('../icons/wallet.png')} style={styles.titleIcon} />
             <Text style={styles.badgeTitleLight}>今月の出費</Text>
           </View>
           <Text style={styles.badgeValueLarge}>
@@ -141,9 +172,10 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             <Text style={styles.badgeUnit}> 円</Text>
           </Text>
         </View>
-        <View style={[styles.badge, { backgroundColor: '#DDE9F7' }]}> 
+        <View style={[styles.badge, { backgroundColor: '#F3F2F7' }]}> 
+          <View style={[styles.leftStripe, { backgroundColor: '#DDE9F7' }]} />
           <View style={styles.rowAlignCenter}>
-            <Image source={require('../icons/money4.png')} style={styles.titleIcon} />
+            <Image source={require('../icons/money3.png')} style={styles.titleIcon} />
             <Text style={styles.badgeTitleLight}>今月の予算あと</Text>
           </View>
           <Text style={styles.badgeValueLarge}>
@@ -156,19 +188,83 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
       <FadeInUp delay={120} distance={20}>
         <View style={[styles.section, styles.stack, { marginTop: spacing.sm }]}> 
-        <View style={[styles.miniBadge, { backgroundColor: '#F3E9DF' }]}> 
+        <View style={[styles.miniBadge, { backgroundColor: '#F3F2F7' }]}> 
+          <View style={[styles.leftStripe, { backgroundColor: '#F3E9DF' }]} />
           <View style={styles.rowAlignCenter}>
-            <Image source={require('../icons/food2.png')} style={styles.titleIcon} />
+            <Image source={require('../icons/food.png')} style={styles.titleIcon} />
             <Text style={styles.miniTitle}>外食回数</Text>
           </View>
           <Text style={[styles.miniValue, { color: '#FF7F00' }]}>{eatingOut.count} <Text style={styles.badgeUnit}>回</Text></Text>
         </View>
-        <View style={[styles.miniBadge, { backgroundColor: '#DFEEE7' }]}> 
+        <View style={[styles.miniBadge, { backgroundColor: '#F3F2F7' }]}> 
+          <View style={[styles.leftStripe, { backgroundColor: '#DFEEE7' }]} />
           <View style={styles.rowAlignCenter}>
-            <Image source={require('../icons/shop2.png')} style={styles.titleIcon} />
+            <Image source={require('../icons/shop.png')} style={styles.titleIcon} />
             <Text style={styles.miniTitle}>コンビニ利用</Text>
           </View>
           <Text style={[styles.miniValue, { color: '#0DFF00' }]}>{convenienceCount} <Text style={styles.badgeUnit}>回</Text></Text>
+        </View>
+        <View style={[styles.miniBadge, { backgroundColor: '#F3F2F7' }]}> 
+          <View style={[styles.leftStripe, { backgroundColor: '#F7DDDA' }]} />
+          <View style={styles.rowAlignCenter}>
+            <Image source={require('../icons/money5.png')} style={styles.titleIcon} />
+            <Text style={styles.miniTitle}>今月の食費</Text>
+          </View>
+          <Text style={[styles.miniValue, { color: '#000' }]}>{foodMonthTotal.toLocaleString()} <Text style={styles.badgeUnit}>円</Text></Text>
+        </View>
+        <View style={[styles.miniBadge, { backgroundColor: '#F3F2F7' }]}> 
+          <View style={[styles.leftStripe, { backgroundColor: '#DAF4F7' }]} />
+          <View style={styles.rowAlignCenter}>
+            <Image source={require('../icons/food3.png')} style={styles.titleIcon} />
+            <Text style={styles.miniTitle}>今週の夕食自炊回数</Text>
+          </View>
+          <Text style={[styles.miniValue, { color: '#000' }]}>{dinnerCookCount} <Text style={styles.badgeUnit}>回</Text></Text>
+          <TouchableOpacity style={[styles.moreBtn, { backgroundColor: '#66D0FF' }]} onPress={async () => {
+            const uid = getFirebaseAuth().currentUser?.uid;
+            if (!uid) return;
+            const profile = await getUserProfile(uid);
+            const householdId = (profile && (profile['householdId'] as string)) || '';
+            if (!householdId) return;
+            const today = new Date();
+            const dateKey = today.toISOString().slice(0,10);
+            // 楽観的更新（同日二重加算を防止）
+            setDinnerDaysThisWeek((prev) => {
+              if (prev.includes(dateKey)) return prev;
+              const next = [...prev, dateKey];
+              setDinnerCookCount(next.length);
+              return next;
+            });
+            await upsertCookingEvent({ householdId, weekStart, date: dateKey, kind: 'dinner', userId: uid });
+          }}>
+            <Text style={styles.moreBtnText}>夕食自炊した</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={[styles.miniBadge, { backgroundColor: '#F3F2F7' }]}> 
+          <View style={[styles.leftStripe, { backgroundColor: '#F2DFED' }]} />
+          <View style={styles.rowAlignCenter}>
+            <Image source={require('../icons/food4.png')} style={styles.titleIcon} />
+            <Text style={styles.miniTitle}>今週の昼食自炊・弁当回数</Text>
+          </View>
+          <Text style={[styles.miniValue, { color: '#000' }]}>{lunchCookCount} <Text style={styles.badgeUnit}>回</Text></Text>
+          <TouchableOpacity style={[styles.moreBtn, { backgroundColor: '#FFA8A8' }]} onPress={async () => {
+            const uid = getFirebaseAuth().currentUser?.uid;
+            if (!uid) return;
+            const profile = await getUserProfile(uid);
+            const householdId = (profile && (profile['householdId'] as string)) || '';
+            if (!householdId) return;
+            const today = new Date();
+            const dateKey = today.toISOString().slice(0,10);
+            // 楽観的更新（同日二重加算を防止）
+            setLunchDaysThisWeek((prev) => {
+              if (prev.includes(dateKey)) return prev;
+              const next = [...prev, dateKey];
+              setLunchCookCount(next.length);
+              return next;
+            });
+            await upsertCookingEvent({ householdId, weekStart, date: dateKey, kind: 'lunch', userId: uid });
+          }}>
+            <Text style={styles.moreBtnText}>昼食自炊した</Text>
+          </TouchableOpacity>
         </View>
         </View>
       </FadeInUp>
@@ -188,7 +284,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       
 
       <TouchableOpacity style={styles.cta} activeOpacity={0.8} onPress={() => navigation.navigate('Input')}>
-        <Text style={styles.ctaText}>記録する</Text>
+        <Text style={styles.ctaText}>出費記録する</Text>
       </TouchableOpacity>
       <View style={{ height: 24 }} />
     </ScrollView>
@@ -204,16 +300,19 @@ const styles = StyleSheet.create({
   rowGap: { flexDirection: 'row', gap: 12, width: '100%' },
   stack: { flexDirection: 'column', gap: 12, width: '100%' },
   rowAlignCenter: { flexDirection: 'row', alignItems: 'flex-end', gap: 0, height: 18 },
-  badge: { width: '100%', borderRadius: 12, padding: spacing.md, marginBottom: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
+  badge: { width: '100%', borderRadius: 12, padding: spacing.md, paddingLeft: 24, marginBottom: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3, position: 'relative' },
   badgeTitleLight: { color: '#000', fontWeight: '700', marginBottom: 0, fontSize: 14, lineHeight: 14 },
   badgeValueLarge: { color: '#000', fontSize: 21, fontWeight: '700' },
   badgeUnit: { color: '#000', fontSize: 14, fontWeight: '700' },
   valueSpendingNumber: { color: '#FF0036' },
   valueBudgetNumber: { color: '#0076FF' },
   titleIcon: { width: 18, height: 18, marginRight: 0, borderRadius: 4 },
-  miniBadge: { width: '100%', borderRadius: 12, padding: spacing.md, marginBottom: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3 },
+  miniBadge: { width: '100%', borderRadius: 12, padding: spacing.md, paddingLeft: 24, marginBottom: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3, position: 'relative' },
+  leftStripe: { position: 'absolute', left: 8, top: 10, bottom: 10, width: 6, borderRadius: 4 },
   miniTitle: { color: '#000', fontWeight: '700', marginBottom: 0, fontSize: 14, lineHeight: 14 },
   miniValue: { color: '#000', fontSize: 18, fontWeight: '700' },
+  moreBtn: { marginTop: spacing.sm, alignSelf: 'flex-start', backgroundColor: colors.positive, paddingVertical: 8, paddingHorizontal: 12, borderRadius: 8 },
+  moreBtnText: { color: '#000', fontWeight: '700' },
   cta: { backgroundColor: colors.positive, paddingVertical: spacing.md, alignItems: 'center', borderRadius: 12, marginTop: spacing.lg },
   ctaText: { color: '#000', fontWeight: '700' },
 });
