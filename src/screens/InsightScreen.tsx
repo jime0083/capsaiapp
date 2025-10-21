@@ -126,9 +126,10 @@ const InsightScreen: React.FC = () => {
 
       <FadeInUp delay={60} distance={20}>
         <View style={[styles.section, styles.stack]}> 
-          <View style={[styles.badge, { backgroundColor: '#F3E0E4' }]}> 
+          <View style={[styles.badge, { backgroundColor: '#F3F2F7', position: 'relative', paddingLeft: 24 }]}> 
+            <View style={{ position: 'absolute', left: 8, top: 10, bottom: 10, width: 6, borderRadius: 4, backgroundColor: '#FF6B9A' }} />
             <View style={styles.rowAlignCenter}>
-              <Image source={require('../icons/wallet2.png')} style={styles.titleIcon} />
+              <Image source={require('../icons/wallet.png')} style={styles.titleIcon} />
               <Text style={styles.badgeTitleLight}>今月の出費</Text>
             </View>
             <Text style={styles.badgeValueLarge}>
@@ -136,9 +137,10 @@ const InsightScreen: React.FC = () => {
               <Text style={styles.badgeUnit}> 円</Text>
             </Text>
           </View>
-          <View style={[styles.badge, { backgroundColor: '#DDE9F7' }]}> 
+          <View style={[styles.badge, { backgroundColor: '#F3F2F7', position: 'relative', paddingLeft: 24 }]}> 
+            <View style={{ position: 'absolute', left: 8, top: 10, bottom: 10, width: 6, borderRadius: 4, backgroundColor: '#66A6FF' }} />
             <View style={styles.rowAlignCenter}>
-              <Image source={require('../icons/money4.png')} style={styles.titleIcon} />
+              <Image source={require('../icons/money3.png')} style={styles.titleIcon} />
               <Text style={styles.badgeTitleLight}>今月の予算あと</Text>
             </View>
             <Text style={styles.badgeValueLarge}>

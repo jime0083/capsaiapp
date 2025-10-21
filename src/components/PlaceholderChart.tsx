@@ -4,7 +4,7 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { colors, spacing } from '../styles/theme';
-import Svg, { G, Path } from 'react-native-svg';
+import Svg, { G, Path, Circle } from 'react-native-svg';
 
 type Slice = { key: string; value: number; color: string };
 
@@ -39,6 +39,24 @@ export const PlaceholderChart: React.FC<Props> = ({ data, height = 160, title, t
   let angle = 0;
 
   const hovered = hoverIdx != null ? data[hoverIdx] : null;
+  const hoverPos = useMemo(() => {
+    if (hoverIdx == null) return null;
+    // 再計算: ポイントの中心近傍座標
+    let ang = 0;
+    for (let i = 0; i <= hoverIdx; i++) {
+      const slice = data[i];
+      const a = (slice.value / total) * 360;
+      if (i === hoverIdx) {
+        ang += a / 2; // そのスライスの中央
+        break;
+      }
+      ang += a;
+    }
+    const rad = (ang - 90) * (Math.PI / 180);
+    const x = cx + (r * 0.7) * Math.cos(rad);
+    const y = cy + (r * 0.7) * Math.sin(rad);
+    return { x, y };
+  }, [hoverIdx, data, total, cx, cy, r]);
 
   return (
     <View style={[styles.container, { height, width: '100%' }]}> 
@@ -74,8 +92,8 @@ export const PlaceholderChart: React.FC<Props> = ({ data, height = 160, title, t
           </G>
         </Svg>
       </View>
-      {hovered ? (
-        <View style={styles.tooltip}>
+      {hovered && hoverPos ? (
+        <View style={[styles.tooltip, { left: hoverPos.x + 8, top: hoverPos.y - 10 }]}>
           <Text style={styles.tooltipText}>{hovered.key}</Text>
           <Text style={styles.tooltipText}>{`${hovered.value.toLocaleString()} 円`}</Text>
         </View>

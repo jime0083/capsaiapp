@@ -146,24 +146,38 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
     return Math.max(months, 0);
   }, [goal]);
   const thisMonthBudgetLeft = useMemo(() => !goal ? 0 : Math.max(goal.monthlyIncome - thisMonthSpending, 0), [goal, thisMonthSpending]);
+  const goalPercent = useMemo(() => {
+    if (!goal) return 0;
+    const p = Math.round((goal.currentAmount / goal.targetAmount) * 100);
+    return isFinite(p) ? p : 0;
+  }, [goal]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* 目標ヘッダを下からのフェードイン */}
+      {/* 目標（Missionの現在の目標と同レイアウト） */}
       <FadeInUp distance={20}>
-        <TopBanner
-          title={goal?.title || '目標未設定'}
-          imageUrl={undefined}
-          remainingAmount={remainingToTarget}
-          monthsRemaining={monthsRemaining}
-          backgroundColor={'#FFE385'}
-        />
+        <View style={styles.goalSection}>
+          <View style={[styles.leftStripe, { backgroundColor: '#FFD166' }]} />
+          <View style={styles.titleRow}>
+            <Image source={require('../icons/flag.png')} style={styles.titleIcon} />
+            <View style={styles.titleTextWrap}>
+              <Text style={[styles.title, styles.headerTight]}>現在の目標</Text>
+            </View>
+          </View>
+          <Text style={styles.goalName}>{goal?.title || '未設定'}</Text>
+          <Text style={styles.sub}>目標額: {goal ? goal.targetAmount.toLocaleString() : 0} 円</Text>
+          <Text style={styles.sub}>目標達成まであと: <Text style={styles.remainingBig}>{remainingToTarget.toLocaleString()}</Text> 円</Text>
+          <View style={styles.barBg}>
+            <View style={[styles.barFill, { width: `${goalPercent}%` }]} />
+          </View>
+          <Text style={styles.sub}>{goalPercent}% 達成</Text>
+        </View>
       </FadeInUp>
 
       <FadeInUp delay={60} distance={20}>
         <View style={[styles.section, styles.stack]}> 
         <View style={[styles.badge, { backgroundColor: '#F3F2F7' }]}> 
-          <View style={[styles.leftStripe, { backgroundColor: '#F3E0E4' }]} />
+          <View style={[styles.leftStripe, { backgroundColor: '#FF6B9A' }]} />
           <View style={styles.rowAlignCenter}>
             <Image source={require('../icons/wallet.png')} style={styles.titleIcon} />
             <Text style={styles.badgeTitleLight}>今月の出費</Text>
@@ -174,7 +188,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           </Text>
         </View>
         <View style={[styles.badge, { backgroundColor: '#F3F2F7' }]}> 
-          <View style={[styles.leftStripe, { backgroundColor: '#DDE9F7' }]} />
+          <View style={[styles.leftStripe, { backgroundColor: '#66A6FF' }]} />
           <View style={styles.rowAlignCenter}>
             <Image source={require('../icons/money3.png')} style={styles.titleIcon} />
             <Text style={styles.badgeTitleLight}>今月の予算あと</Text>
@@ -189,24 +203,24 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
       <FadeInUp delay={120} distance={20}>
         <View style={[styles.section, styles.stack, { marginTop: spacing.sm }]}> 
-        <View style={[styles.miniBadge, { backgroundColor: '#F3F2F7' }]}> 
-          <View style={[styles.leftStripe, { backgroundColor: '#F3E9DF' }]} />
+        <View style={[styles.miniBadge, { backgroundColor: '#F3F2F7', borderColor: '#F4A261', borderWidth: 1 }]}> 
+          <View style={[styles.leftStripe, { backgroundColor: '#F4A261' }]} />
           <View style={styles.rowAlignCenter}>
             <Image source={require('../icons/food.png')} style={styles.titleIcon} />
-            <Text style={styles.miniTitle}>外食回数</Text>
+            <Text style={styles.miniTitle}>今週の外食回数</Text>
           </View>
           <Text style={[styles.miniValue, { color: '#FF7F00' }]}>{eatingOut.count} <Text style={styles.badgeUnit}>回</Text></Text>
         </View>
         <View style={[styles.miniBadge, { backgroundColor: '#F3F2F7' }]}> 
-          <View style={[styles.leftStripe, { backgroundColor: '#DFEEE7' }]} />
+          <View style={[styles.leftStripe, { backgroundColor: '#81E6D9' }]} />
           <View style={styles.rowAlignCenter}>
             <Image source={require('../icons/shop.png')} style={styles.titleIcon} />
-            <Text style={styles.miniTitle}>コンビニ利用</Text>
+            <Text style={styles.miniTitle}>今週のコンビニ利用</Text>
           </View>
           <Text style={[styles.miniValue, { color: '#0DFF00' }]}>{convenienceCount} <Text style={styles.badgeUnit}>回</Text></Text>
         </View>
-        <View style={[styles.miniBadge, { backgroundColor: '#F3F2F7' }]}> 
-          <View style={[styles.leftStripe, { backgroundColor: '#F7DDDA' }]} />
+        <View style={[styles.miniBadge, { backgroundColor: '#F3F2F7', borderColor: '#A29BFE', borderWidth: 1 }]}> 
+          <View style={[styles.leftStripe, { backgroundColor: '#A29BFE' }]} />
           <View style={styles.rowAlignCenter}>
             <Image source={require('../icons/money5.png')} style={styles.titleIcon} />
             <Text style={styles.miniTitle}>今月の食費</Text>
@@ -214,7 +228,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           <Text style={[styles.miniValue, { color: '#000' }]}>{foodMonthTotal.toLocaleString()} <Text style={styles.badgeUnit}>円</Text></Text>
         </View>
         <View style={[styles.miniBadge, { backgroundColor: '#F3F2F7' }]}> 
-          <View style={[styles.leftStripe, { backgroundColor: '#DAF4F7' }]} />
+          <View style={[styles.leftStripe, { backgroundColor: '#66D0FF' }]} />
           <View style={styles.rowAlignCenter}>
             <Image source={require('../icons/food3.png')} style={styles.titleIcon} />
             <Text style={styles.miniTitle}>今週の夕食自炊回数</Text>
@@ -241,7 +255,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           </TouchableOpacity>
         </View>
         <View style={[styles.miniBadge, { backgroundColor: '#F3F2F7' }]}> 
-          <View style={[styles.leftStripe, { backgroundColor: '#F2DFED' }]} />
+          <View style={[styles.leftStripe, { backgroundColor: '#E7A0E2' }]} />
           <View style={styles.rowAlignCenter}>
             <Image source={require('../icons/food4.png')} style={styles.titleIcon} />
             <Text style={styles.miniTitle}>今週の昼食自炊・弁当回数</Text>
@@ -301,6 +315,15 @@ const styles = StyleSheet.create({
   rowGap: { flexDirection: 'row', gap: 12, width: '100%' },
   stack: { flexDirection: 'column', gap: 12, width: '100%' },
   rowAlignCenter: { flexDirection: 'row', alignItems: 'flex-end', gap: 0, height: 18 },
+  goalSection: { backgroundColor: '#F3F2F7', borderRadius: 12, padding: spacing.md, paddingLeft: 24, marginTop: spacing.lg, borderWidth: 1, borderColor: '#FFD166', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6, position: 'relative' },
+  title: { color: colors.text, fontSize: 16, marginBottom: spacing.sm, fontWeight: '700' },
+  headerTight: { marginBottom: 0, fontSize: 14, lineHeight: 18 },
+  titleRow: { flexDirection: 'row', alignItems: 'flex-end', height: 18 },
+  titleTextWrap: { justifyContent: 'flex-end', height: 18 },
+  goalName: { color: '#FFB202', fontSize: 20, fontWeight: '700', marginBottom: 0 },
+  barBg: { height: 10, backgroundColor: '#EEE', borderRadius: 6, overflow: 'hidden' },
+  barFill: { height: 10, backgroundColor: colors.positive },
+  remainingBig: { fontSize: 14 * 1.2, fontWeight: '700', color: '#000' },
   badge: { width: '100%', borderRadius: 12, padding: spacing.md, paddingLeft: 24, marginBottom: 3, shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 8, elevation: 3, position: 'relative' },
   badgeTitleLight: { color: '#000', fontWeight: '700', marginBottom: 0, fontSize: 14, lineHeight: 14 },
   badgeValueLarge: { color: '#000', fontSize: 21, fontWeight: '700' },
