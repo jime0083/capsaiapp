@@ -107,7 +107,9 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
           const k = t.category || 'その他';
           byCat.set(k, (byCat.get(k) || 0) + (Number(t.sharedAmount) || 0));
         });
-        const pieData = Array.from(byCat.entries()).map(([key, value]) => ({ key, value, color: categoryColors[key] || '#888' }));
+        const pieData = Array.from(byCat.entries())
+          .sort((a, b) => b[1] - a[1])
+          .map(([key, value]) => ({ key, value, color: categoryColors[key] || categoryColors['その他'] || '#888' }));
         setPie(pieData);
         const eating = thisMonth.filter((t) => t.category === '食費(外食)');
         const count = eating.length;

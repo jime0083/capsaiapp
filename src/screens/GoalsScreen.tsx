@@ -139,7 +139,7 @@ const GoalsScreen: React.FC = () => {
       <ScrollView contentContainerStyle={styles.content}>
         <FadeInUp delay={0} distance={20}>
         <View style={styles.goalSection}>
-          <View style={[styles.leftStripe, { backgroundColor: '#F3E9DF' }]} />
+          <View style={[styles.leftStripe, { backgroundColor: '#FFD166' }]} />
           <View style={styles.titleRow}>
             <Image source={require('../icons/flag.png')} style={styles.titleIcon} />
             <View style={styles.titleTextWrap}>
@@ -158,7 +158,7 @@ const GoalsScreen: React.FC = () => {
 
         <FadeInUp delay={60} distance={20}>
         <View style={styles.sectionCarry}>
-          <View style={[styles.leftStripe, { backgroundColor: '#DFEEE7' }]} />
+          <View style={[styles.leftStripe, { backgroundColor: '#81E6D9' }]} />
           <View style={styles.titleRow}>
             <Image source={require('../icons/money6.png')} style={styles.titleIcon} />
             <View style={styles.titleTextWrap}>
@@ -183,7 +183,7 @@ const GoalsScreen: React.FC = () => {
         {/* ウィークリーアクション（タイトル・グレー背景なし） */}
         <FadeInUp delay={120} distance={20}>
           <View style={styles.cardSelf}>
-            <View style={[styles.leftStripe, { backgroundColor: '#F3E0E4' }]} />
+            <View style={[styles.leftStripe, { backgroundColor: '#FF6B9A' }]} />
             <View style={styles.titleRow}>
               <Image source={require('../icons/run.png')} style={styles.titleIcon} />
               <View style={styles.titleTextWrap}>
@@ -201,7 +201,7 @@ const GoalsScreen: React.FC = () => {
 
         <FadeInUp delay={180} distance={20}>
         <View style={styles.cardAction}>
-          <View style={[styles.leftStripe, { backgroundColor: '#DDE9F7' }]} />
+          <View style={[styles.leftStripe, { backgroundColor: '#66A6FF' }]} />
           <View style={styles.titleRow}>
             <Image source={require('../icons/run2.png')} style={styles.titleIcon} />
             <View style={styles.titleTextWrap}>
@@ -285,11 +285,11 @@ const styles = StyleSheet.create({
   goalName: { color: '#FFB202', fontSize: 20, fontWeight: '700', marginBottom: 0 },
   card: { backgroundColor: colors.card, padding: spacing.md, borderRadius: 12, marginBottom: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 },
   cardPrimary: { backgroundColor: colors.card, padding: spacing.md, borderRadius: 12, marginBottom: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6 },
-  goalSection: { backgroundColor: '#F3F2F7', borderRadius: 12, padding: spacing.md, paddingLeft: 24, marginBottom: spacing.md, borderWidth: 1, borderColor: '#E5E5EA', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6, position: 'relative' },
+  goalSection: { backgroundColor: '#F3F2F7', borderRadius: 12, padding: spacing.md, paddingLeft: 24, marginBottom: spacing.md, borderWidth: 1, borderColor: '#FFD166', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6, position: 'relative' },
   sectionGray: { backgroundColor: '#F3F2F7', borderRadius: 12, padding: spacing.md, paddingLeft: 24, marginBottom: spacing.md, borderWidth: 1, borderColor: '#E5E5EA', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6, position: 'relative' },
-  sectionCarry: { backgroundColor: '#F3F2F7', borderRadius: 12, padding: spacing.md, paddingLeft: 24, marginBottom: spacing.md, borderWidth: 1, borderColor: '#CFE2DB', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 10, elevation: 5, position: 'relative' },
-  cardAction: { backgroundColor: '#F3F2F7', padding: spacing.md, paddingLeft: 24, borderRadius: 12, marginBottom: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6, position: 'relative' },
-  cardSelf: { backgroundColor: '#F3F2F7', padding: spacing.md, paddingLeft: 24, borderRadius: 12, marginBottom: spacing.md, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6, position: 'relative' },
+  sectionCarry: { backgroundColor: '#F3F2F7', borderRadius: 12, padding: spacing.md, paddingLeft: 24, marginBottom: spacing.md, borderWidth: 1, borderColor: '#81E6D9', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.12, shadowRadius: 10, elevation: 5, position: 'relative' },
+  cardAction: { backgroundColor: '#F3F2F7', padding: spacing.md, paddingLeft: 24, borderRadius: 12, marginBottom: spacing.md, borderWidth: 1, borderColor: '#66A6FF', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6, position: 'relative' },
+  cardSelf: { backgroundColor: '#F3F2F7', padding: spacing.md, paddingLeft: 24, borderRadius: 12, marginBottom: spacing.md, borderWidth: 1, borderColor: '#FF6B9A', shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.16, shadowRadius: 12, elevation: 6, position: 'relative' },
   name: { color: '#000', fontSize: 16, marginBottom: spacing.sm },
   barBg: { height: 10, backgroundColor: '#EEE', borderRadius: 6, overflow: 'hidden' },
   barFill: { height: 10, backgroundColor: colors.positive },
