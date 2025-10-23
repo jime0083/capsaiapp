@@ -83,7 +83,9 @@ const InsightScreen: React.FC = () => {
         });
         setThisMonth(mThis);
         setLastMonth(mLast);
-        const pieData = Array.from(byCat.entries()).map(([key, value]) => ({ key, value, color: categoryColors[key] || '#888' }));
+        const pieData = Array.from(byCat.entries())
+          .sort((a, b) => b[1] - a[1])
+          .map(([key, value]) => ({ key, value, color: categoryColors[key] || categoryColors['その他'] || '#888' }));
         setPie(pieData);
 
         // 直近12ヶ月ライン
