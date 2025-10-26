@@ -2,12 +2,118 @@
 // MyPage: ユーザー名、種別、使用日数、バッジ一覧（ダミー）
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Modal, TextInput, Image } from 'react-native';
 import { colors, spacing } from '../styles/theme';
 import { getFirebaseAuth } from '../lib/firebase';
-import { getUserProfile, getLatestGoal, getBadges, updateUserDisplayName, updateGoalTitle, updateGoalPlan, cancelSubscription, updateGoalDeadline } from '../lib/firestoreApi';
+import { getUserProfile, getLatestGoal, getBadges, updateUserDisplayName, updateGoalTitle, updateGoalPlan, cancelSubscription, updateGoalDeadline, getCookingCounts, getWeeklyActionCompletedCount, countMonthsFoodUnder50k, countMonthsBudgetAchieved, getTotalSavedAmount } from '../lib/firestoreApi';
 import FadeInUp from '../components/FadeInUp';
 import { Picker } from '@react-native-picker/picker';
+
+// バッジ判定用閾値
+const LUNCH_THRESHOLDS = [5, 10, 20, 50, 100];
+const DINNER_THRESHOLDS = [5, 10, 20, 50, 100];
+const WEEKLY_THRESHOLDS = [2, 5, 10, 30, 100];
+const MONTHS_THRESHOLDS = [1, 3, 6, 12, 24]; // 月回数系（食費5万以下、予算達成）
+const SAVED_THRESHOLDS = [10000, 30000, 50000, 100000, 300000]; // 通算節約（円）
+
+// バッジ画像マッピング（require は静的に記述する必要がある）
+const BADGE_SOURCES = {
+  lunch: [
+    require('../assets/badges/medal-blue1.png'),
+    require('../assets/badges/medal-red1.png'),
+    require('../assets/badges/medal-bronds1.png'),
+    require('../assets/badges/medal-silver1.png'),
+    require('../assets/badges/medal-gold1.png'),
+  ],
+  dinner: [
+    require('../assets/badges/medal-blue2.png'),
+    require('../assets/badges/medal-red2.png'),
+    require('../assets/badges/medal-bronds2.png'),
+    require('../assets/badges/medal-silver2.png'),
+    require('../assets/badges/medal-gold2.png'),
+  ],
+  weekly: [
+    require('../assets/badges/medal-blue3.png'),
+    require('../assets/badges/medal-red3.png'),
+    require('../assets/badges/medal-bronds3.png'),
+    require('../assets/badges/medal-silver3.png'),
+    require('../assets/badges/medal-gold3.png'),
+  ],
+  monthsUnder50k: [
+    require('../assets/badges/medal-blue5.png'),
+    require('../assets/badges/medal-red5.png'),
+    require('../assets/badges/medal-bronds5.png'),
+    require('../assets/badges/medal-silver5.png'),
+    require('../assets/badges/medal-gold5.png'),
+  ],
+  monthsBudgetAchieved: [
+    require('../assets/badges/medal-blue4.png'),
+    require('../assets/badges/medal-red4.png'),
+    require('../assets/badges/medal-bronds4.png'),
+    require('../assets/badges/medal-silver4.png'),
+    require('../assets/badges/medal-gold4.png'),
+  ],
+  totalSaved: [
+    require('../assets/badges/medal-blue6.png'),
+    require('../assets/badges/medal-red6.png'),
+    require('../assets/badges/medal-bronds6.png'),
+    require('../assets/badges/medal-silver6.png'),
+    require('../assets/badges/medal-gold6.png'),
+  ],
+} as const;
+
+type BadgeKind = 'lunch' | 'dinner' | 'weekly' | 'monthsUnder50k' | 'monthsBudgetAchieved' | 'totalSaved';
+
+function getAchievedLevelIndex(count: number, thresholds: number[]): number {
+  let idx = -1;
+  for (let i = 0; i < thresholds.length; i++) {
+    if (count > thresholds[i]) idx = i;
+  }
+  return idx; // -1 の場合は未獲得
+}
+
+function getThresholds(kind: BadgeKind): number[] {
+  if (kind === 'lunch') return LUNCH_THRESHOLDS;
+  if (kind === 'dinner') return DINNER_THRESHOLDS;
+  if (kind === 'weekly') return WEEKLY_THRESHOLDS;
+  if (kind === 'monthsUnder50k' || kind === 'monthsBudgetAchieved') return MONTHS_THRESHOLDS;
+  if (kind === 'totalSaved') return SAVED_THRESHOLDS;
+  return [];
+}
+
+function getBadgeImage(kind: BadgeKind, count: number) {
+  const thresholds = getThresholds(kind);
+  const level = getAchievedLevelIndex(count, thresholds);
+  if (level < 0) return null;
+  return BADGE_SOURCES[kind][level];
+}
+
+function renderProgressBar(kind: BadgeKind, count: number) {
+  const thresholds = getThresholds(kind);
+  const level = getAchievedLevelIndex(count, thresholds);
+  const prevThreshold = level >= 0 ? thresholds[level] : 0;
+  const nextThreshold = thresholds[level + 1];
+  if (nextThreshold == null) {
+    return (
+      <View style={{ gap: 6 }}>
+        <View style={styles.progressBar}>
+          <View style={[styles.progressFill, { width: '100%' }]} />
+        </View>
+        <Text style={styles.progressText}>最高メダル獲得済み</Text>
+      </View>
+    );
+  }
+  const progress = Math.max(0, Math.min(1, (count - prevThreshold) / (nextThreshold - prevThreshold)));
+  const remain = Math.max(0, nextThreshold - count);
+  return (
+    <View style={{ gap: 6 }}>
+      <View style={styles.progressBar}>
+        <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
+      </View>
+      <Text style={styles.progressText}>次のメダルまで あと {remain} 回</Text>
+    </View>
+  );
+}
 
 const MyPageScreen: React.FC = () => {
   const [displayName, setDisplayName] = useState<string>('');
@@ -26,6 +132,12 @@ const MyPageScreen: React.FC = () => {
   const [pickYear, setPickYear] = useState<number>(new Date().getFullYear());
   const [pickMonth, setPickMonth] = useState<number>(new Date().getMonth() + 1);
   const [pickDay, setPickDay] = useState<number>(new Date().getDate());
+  const [lunchCookTotal, setLunchCookTotal] = useState<number>(0);
+  const [dinnerCookTotal, setDinnerCookTotal] = useState<number>(0);
+  const [weeklyActionDoneTotal, setWeeklyActionDoneTotal] = useState<number>(0);
+  const [monthsFoodUnder50k, setMonthsFoodUnder50k] = useState<number>(0);
+  const [monthsBudgetAchieved, setMonthsBudgetAchieved] = useState<number>(0);
+  const [totalSavedAmount, setTotalSavedAmount] = useState<number>(0);
 
   useEffect(() => {
     (async () => {
@@ -63,6 +175,18 @@ const MyPageScreen: React.FC = () => {
           }
           const bs = await getBadges(householdId);
           setBadges(bs.map(b => ({ id: b.id, name: b.name, awardedAt: b.awardedAt })));
+          // 累計カウント取得（自炊・ウィークリーアクション）
+          const cook = await getCookingCounts(householdId);
+          setLunchCookTotal(cook.lunchTotal);
+          setDinnerCookTotal(cook.dinnerTotal);
+          const wa = await getWeeklyActionCompletedCount(householdId);
+          setWeeklyActionDoneTotal(wa);
+          const underCount = await countMonthsFoodUnder50k(householdId);
+          setMonthsFoodUnder50k(underCount);
+          const budgetAchieved = await countMonthsBudgetAchieved(householdId);
+          setMonthsBudgetAchieved(budgetAchieved);
+          const savedTotal = await getTotalSavedAmount(householdId);
+          setTotalSavedAmount(savedTotal);
         }
       }
     })();
@@ -73,27 +197,102 @@ const MyPageScreen: React.FC = () => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* 上部情報カード */}
+      {/* バッジセクション（上部に配置） */}
       <FadeInUp delay={0} distance={20}>
-        <View style={styles.headerCard}>
-          <Text style={styles.name}>{displayName}</Text>
-          <Text style={styles.sub}>ユーザー識別: {userTypeLabel}</Text>
-          <Text style={styles.sub}>使用日数: {days} 日</Text>
-          <Text style={styles.sub}>ペアユーザー: {pairUsers.length ? `${pairUsers.length}人` : '未設定'}</Text>
+        <View style={styles.sectionGray}>
+          <Text style={styles.title}>獲得バッジ</Text>
+          <View style={{ gap: 12 }}>
+            {/* 昼食自炊回数 */}
+            <View style={styles.badgeRow}>
+              {getBadgeImage('lunch', lunchCookTotal) ? (
+                <Image source={getBadgeImage('lunch', lunchCookTotal) as any} style={styles.badgeIcon} />
+              ) : (
+                <View style={[styles.badgeIcon, { backgroundColor: '#E5E5EA', borderRadius: 8 }]} />
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sub}>昼食自炊回数: {lunchCookTotal} 回</Text>
+                {renderProgressBar('lunch', lunchCookTotal)}
+              </View>
+            </View>
+            {/* 夕食自炊回数 */}
+            <View style={styles.badgeRow}>
+              {getBadgeImage('dinner', dinnerCookTotal) ? (
+                <Image source={getBadgeImage('dinner', dinnerCookTotal) as any} style={styles.badgeIcon} />
+              ) : (
+                <View style={[styles.badgeIcon, { backgroundColor: '#E5E5EA', borderRadius: 8 }]} />
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sub}>夕食自炊回数: {dinnerCookTotal} 回</Text>
+                {renderProgressBar('dinner', dinnerCookTotal)}
+              </View>
+            </View>
+            {/* ウィークリーアクション達成回数 */}
+            <View style={styles.badgeRow}>
+              {getBadgeImage('weekly', weeklyActionDoneTotal) ? (
+                <Image source={getBadgeImage('weekly', weeklyActionDoneTotal) as any} style={styles.badgeIcon} />
+              ) : (
+                <View style={[styles.badgeIcon, { backgroundColor: '#E5E5EA', borderRadius: 8 }]} />
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sub}>ウィークリーアクション達成回数: {weeklyActionDoneTotal} 回</Text>
+                {renderProgressBar('weekly', weeklyActionDoneTotal)}
+              </View>
+            </View>
+            {/* 既存（Firestore保管のバッジ一覧） */}
+            {badges.map((b) => (
+              <Text key={b.id} style={styles.sub}>🏅 {b.name}</Text>
+            ))}
+            {/* 月の食費5万以下 回数 */}
+            <View style={styles.badgeRow}>
+              {getBadgeImage('monthsUnder50k', monthsFoodUnder50k) ? (
+                <Image source={getBadgeImage('monthsUnder50k', monthsFoodUnder50k) as any} style={styles.badgeIcon} />
+              ) : (
+                <View style={[styles.badgeIcon, { backgroundColor: '#E5E5EA', borderRadius: 8 }]} />
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sub}>月の食費5万以下: {monthsFoodUnder50k} 回</Text>
+                {renderProgressBar('monthsUnder50k', monthsFoodUnder50k)}
+              </View>
+            </View>
+            {/* 今月の予算達成 回数 */}
+            <View style={styles.badgeRow}>
+              {getBadgeImage('monthsBudgetAchieved', monthsBudgetAchieved) ? (
+                <Image source={getBadgeImage('monthsBudgetAchieved', monthsBudgetAchieved) as any} style={styles.badgeIcon} />
+              ) : (
+                <View style={[styles.badgeIcon, { backgroundColor: '#E5E5EA', borderRadius: 8 }]} />
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sub}>今月の予算達成回数: {monthsBudgetAchieved} 回</Text>
+                {renderProgressBar('monthsBudgetAchieved', monthsBudgetAchieved)}
+              </View>
+            </View>
+            {/* 通算節約 金額 */}
+            <View style={styles.badgeRow}>
+              {getBadgeImage('totalSaved', totalSavedAmount) ? (
+                <Image source={getBadgeImage('totalSaved', totalSavedAmount) as any} style={styles.badgeIcon} />
+              ) : (
+                <View style={[styles.badgeIcon, { backgroundColor: '#E5E5EA', borderRadius: 8 }]} />
+              )}
+              <View style={{ flex: 1 }}>
+                <Text style={styles.sub}>通算節約: {totalSavedAmount.toLocaleString()} 円</Text>
+                {renderProgressBar('totalSaved', totalSavedAmount)}
+              </View>
+            </View>
+          </View>
         </View>
       </FadeInUp>
 
-      {/* バッジセクション */}
+      {/* ユーザー情報カード */}
       <FadeInUp delay={60} distance={20}>
-        <View style={styles.sectionGray}>
-          <Text style={styles.title}>獲得バッジ</Text>
-          <View style={{ gap: 8 }}>
-            {badges.length === 0 ? (
-              <Text style={styles.sub}>まだバッジがありません</Text>
-            ) : badges.map((b) => (
-              <Text key={b.id} style={styles.sub}>🏅 {b.name}</Text>
-            ))}
+        <View style={styles.headerCard}>
+          <Text style={styles.title}>ユーザー情報</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Text style={styles.sub}>ユーザー名:</Text>
+            <Text style={styles.sub}>{displayName}</Text>
           </View>
+          <Text style={styles.sub}>ユーザー識別: {userTypeLabel}</Text>
+          <Text style={styles.sub}>使用日数: {days} 日</Text>
+          <Text style={styles.sub}>ペアユーザー: {pairUsers.length ? `${pairUsers.length}人` : '未設定'}</Text>
         </View>
       </FadeInUp>
 
@@ -248,6 +447,11 @@ const styles = StyleSheet.create({
   primaryText: { color: '#000', fontWeight: '700' },
   secondary: { backgroundColor: '#EEE', paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: 10, alignItems: 'center', alignSelf: 'flex-start' },
   secondaryText: { color: '#000', fontWeight: '700' },
+  badgeRow: { flexDirection: 'row', gap: 12, alignItems: 'center' },
+  badgeIcon: { width: 48, height: 48 },
+  progressBar: { height: 10, backgroundColor: '#E5E5EA', borderRadius: 6, overflow: 'hidden' },
+  progressFill: { height: '100%', backgroundColor: colors.positive },
+  progressText: { color: '#000', marginTop: 2, fontSize: 12 },
 });
 
 export default MyPageScreen;

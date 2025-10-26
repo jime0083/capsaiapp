@@ -549,6 +549,93 @@ export function subscribeWeeklyCooking(
   return unsub;
 }
 
+export async function getCookingCounts(householdId: string): Promise<{ dinnerTotal: number; lunchTotal: number }> {
+  const db = getFirebaseFirestore();
+  const col = collection(db, 'weeklyCooking');
+  const q1 = query(col, where('householdId', '==', householdId));
+  const snap = await getDocs(q1);
+  let dinner = 0, lunch = 0;
+  snap.forEach((d) => {
+    const data = d.data() as any;
+    if (data.kind === 'dinner') dinner += 1;
+    else if (data.kind === 'lunch') lunch += 1;
+  });
+  return { dinnerTotal: dinner, lunchTotal: lunch };
+}
+
+export async function getWeeklyActionCompletedCount(householdId: string): Promise<number> {
+  const db = getFirebaseFirestore();
+  const col = collection(db, 'weeklySelections');
+  const q1 = query(col, where('householdId', '==', householdId), where('completed', '==', true));
+  const snap = await getDocs(q1);
+  return snap.size;
+}
+
+// ===== Monthly achievements & savings =====
+function buildMonthKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
+
+export async function countMonthsFoodUnder50k(
+  householdId: string,
+  monthsBack: number = 36,
+): Promise<number> {
+  const now = new Date();
+  let count = 0;
+  const targetCategories = new Set<string>(['食費', '食費(コンビニ)', '食費(外食)', '外食']);
+  for (let i = 0; i < monthsBack; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthKey = buildMonthKey(d);
+    const txs = await getMonthlyTransactions(householdId, monthKey);
+    const monthlyFood = txs
+      .filter((t) => targetCategories.has(String(t.category)))
+      .reduce((a, t) => a + (Number(t.sharedAmount) || 0), 0);
+    if (monthlyFood < 50000) count += 1;
+  }
+  return count;
+}
+
+export async function countMonthsBudgetAchieved(
+  householdId: string,
+  monthsBack: number = 36,
+): Promise<number> {
+  const goal = await getLatestGoal(householdId);
+  const budget = Number(goal?.monthlyIncome || 0);
+  if (budget <= 0) return 0;
+  const now = new Date();
+  let count = 0;
+  for (let i = 0; i < monthsBack; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthKey = buildMonthKey(d);
+    const txs = await getMonthlyTransactions(householdId, monthKey);
+    const spending = txs.reduce((a, t) => a + (Number(t.sharedAmount) || 0), 0);
+    if (spending <= budget) count += 1;
+  }
+  return count;
+}
+
+export async function getTotalSavedAmount(
+  householdId: string,
+  monthsBack: number = 60,
+): Promise<number> {
+  const goal = await getLatestGoal(householdId);
+  const budget = Number(goal?.monthlyIncome || 0);
+  if (budget <= 0) return 0;
+  const now = new Date();
+  let total = 0;
+  for (let i = 0; i < monthsBack; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const monthKey = buildMonthKey(d);
+    const txs = await getMonthlyTransactions(householdId, monthKey);
+    const spending = txs.reduce((a, t) => a + (Number(t.sharedAmount) || 0), 0);
+    const diff = budget - spending;
+    if (diff > 0) total += diff;
+  }
+  return total;
+}
+
 export async function getBadges(householdId: string): Promise<Badge[]> {
   const db = getFirebaseFirestore();
   const col = collection(db, 'badges');
