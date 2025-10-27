@@ -2,13 +2,13 @@
 // Home: 最新目標、残額、今月の出費(共有出費)/予算残、用途別グラフ、記録ボタン
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image, Alert } from 'react-native';
 import { colors, spacing } from '../styles/theme';
 import TopBanner from '../components/TopBanner';
 import FadeInUp from '../components/FadeInUp';
 import PlaceholderChart from '../components/PlaceholderChart';
 import { getFirebaseAuth } from '../lib/firebase';
-import { getUserProfile, subscribeLatestGoal, subscribeUserTransactionsUnion, upsertCookingEvent, subscribeWeeklyCooking } from '../lib/firestoreApi';
+import { getUserProfile, subscribeLatestGoal, subscribeUserTransactionsUnion, upsertCookingEventAndCounters, subscribeWeeklyCooking, subscribeWeeklyCookingCounters } from '../lib/firestoreApi';
 import { useIsFocused } from '@react-navigation/native';
 import { categoryColors } from '../mock/sampleData';
 
@@ -69,7 +69,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
     const m = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${dd}`;
-  }, []);
+  }, [isFocused]);
 
   useEffect(() => {
     let unsubGoal: (() => void) | null = null;
@@ -124,13 +124,10 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       });
 
       // Weekly cooking events
-      unsubCook = subscribeWeeklyCooking(householdId, weekStart, (events) => {
-        const dinnerDays = Array.from(new Set(events.filter(e => e.kind === 'dinner').map(e => e.date)));
-        const lunchDays = Array.from(new Set(events.filter(e => e.kind === 'lunch').map(e => e.date)));
-        setDinnerDaysThisWeek(dinnerDays);
-        setLunchDaysThisWeek(lunchDays);
-        setDinnerCookCount(dinnerDays.length);
-        setLunchCookCount(lunchDays.length);
+      if (unsubCook) { unsubCook(); unsubCook = null; }
+      unsubCook = subscribeWeeklyCookingCounters(householdId, weekStart, (counts) => {
+        setDinnerCookCount(counts.dinnerCount);
+        setLunchCookCount(counts.lunchCount);
       });
     };
 
@@ -244,14 +241,12 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             if (!householdId) return;
             const today = new Date();
             const dateKey = today.toISOString().slice(0,10);
-            // 楽観的更新（同日二重加算を防止）
-            setDinnerDaysThisWeek((prev) => {
-              if (prev.includes(dateKey)) return prev;
-              const next = [...prev, dateKey];
-              setDinnerCookCount(next.length);
-              return next;
-            });
-            await upsertCookingEvent({ householdId, weekStart, date: dateKey, kind: 'dinner', userId: uid });
+            try {
+              await upsertCookingEventAndCounters({ householdId, weekStart, date: dateKey, kind: 'dinner', userId: uid });
+            } catch (e) {
+              console.error('upsert dinner failed', e);
+              Alert.alert('保存に失敗しました', String(e));
+            }
           }}>
             <Text style={styles.moreBtnText}>夕食自炊した</Text>
           </TouchableOpacity>
@@ -271,14 +266,12 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             if (!householdId) return;
             const today = new Date();
             const dateKey = today.toISOString().slice(0,10);
-            // 楽観的更新（同日二重加算を防止）
-            setLunchDaysThisWeek((prev) => {
-              if (prev.includes(dateKey)) return prev;
-              const next = [...prev, dateKey];
-              setLunchCookCount(next.length);
-              return next;
-            });
-            await upsertCookingEvent({ householdId, weekStart, date: dateKey, kind: 'lunch', userId: uid });
+            try {
+              await upsertCookingEventAndCounters({ householdId, weekStart, date: dateKey, kind: 'lunch', userId: uid });
+            } catch (e) {
+              console.error('upsert lunch failed', e);
+              Alert.alert('保存に失敗しました', String(e));
+            }
           }}>
             <Text style={styles.moreBtnText}>昼食自炊した</Text>
           </TouchableOpacity>

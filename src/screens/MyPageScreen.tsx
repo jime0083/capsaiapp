@@ -5,9 +5,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Modal, TextInput, Image } from 'react-native';
 import { colors, spacing } from '../styles/theme';
 import { getFirebaseAuth } from '../lib/firebase';
-import { getUserProfile, getLatestGoal, getBadges, updateUserDisplayName, updateGoalTitle, updateGoalPlan, cancelSubscription, updateGoalDeadline, getCookingCounts, getWeeklyActionCompletedCount, countMonthsFoodUnder50k, countMonthsBudgetAchieved, getTotalSavedAmount } from '../lib/firestoreApi';
+import { getUserProfile, getLatestGoal, getBadges, updateUserDisplayName, updateGoalTitle, updateGoalPlan, cancelSubscription, updateGoalDeadline, getCookingCounts, getWeeklyActionCompletedCount, countMonthsFoodUnder50k, countMonthsBudgetAchieved, getTotalSavedAmount, subscribeCookingTotals, subscribeCookingTotalsFromEvents } from '../lib/firestoreApi';
 import FadeInUp from '../components/FadeInUp';
 import { Picker } from '@react-native-picker/picker';
+import { useIsFocused } from '@react-navigation/native';
 
 // バッジ判定用閾値
 const LUNCH_THRESHOLDS = [5, 10, 20, 50, 100];
@@ -62,6 +63,25 @@ const BADGE_SOURCES = {
   ],
 } as const;
 
+// 下限/上限専用の白/黒メダル
+const WHITE_SOURCES = {
+  lunch: require('../assets/badges/medal-white.png'),
+  dinner: require('../assets/badges/medal-white2.png'),
+  weekly: require('../assets/badges/medal-white3.png'),
+  monthsBudgetAchieved: require('../assets/badges/medal-white4.png'),
+  monthsUnder50k: require('../assets/badges/medal-white5.png'),
+  totalSaved: require('../assets/badges/medal-white6.png'),
+} as const;
+
+const BLACK_SOURCES = {
+  lunch: require('../assets/badges/medal-black.png'),
+  dinner: require('../assets/badges/medal-black3.png'),
+  weekly: require('../assets/badges/medal-black3.png'),
+  monthsBudgetAchieved: require('../assets/badges/medal-black4.png'),
+  monthsUnder50k: require('../assets/badges/medal-black5.png'),
+  totalSaved: require('../assets/badges/medal-black6.png'),
+} as const;
+
 type BadgeKind = 'lunch' | 'dinner' | 'weekly' | 'monthsUnder50k' | 'monthsBudgetAchieved' | 'totalSaved';
 
 function getAchievedLevelIndex(count: number, thresholds: number[]): number {
@@ -83,6 +103,22 @@ function getThresholds(kind: BadgeKind): number[] {
 
 function getBadgeImage(kind: BadgeKind, count: number) {
   const thresholds = getThresholds(kind);
+  // 下限: 白メダル
+  if (kind === 'lunch' && count < 5) return WHITE_SOURCES.lunch;
+  if (kind === 'dinner' && count < 5) return WHITE_SOURCES.dinner;
+  if (kind === 'weekly' && count <= 2) return WHITE_SOURCES.weekly;
+  if (kind === 'monthsUnder50k' && count < 1) return WHITE_SOURCES.monthsUnder50k;
+  if (kind === 'monthsBudgetAchieved' && count < 1) return WHITE_SOURCES.monthsBudgetAchieved;
+  if (kind === 'totalSaved' && count < 10000) return WHITE_SOURCES.totalSaved;
+
+  // 上限: 黒メダル
+  if (kind === 'lunch' && count >= 300) return BLACK_SOURCES.lunch;
+  if (kind === 'dinner' && count >= 300) return BLACK_SOURCES.dinner;
+  if (kind === 'weekly' && count > 200) return BLACK_SOURCES.weekly;
+  if (kind === 'monthsUnder50k' && count >= 50) return BLACK_SOURCES.monthsUnder50k;
+  if (kind === 'monthsBudgetAchieved' && count >= 50) return BLACK_SOURCES.monthsBudgetAchieved;
+  if (kind === 'totalSaved' && count >= 1000000) return BLACK_SOURCES.totalSaved;
+
   const level = getAchievedLevelIndex(count, thresholds);
   if (level < 0) return null;
   return BADGE_SOURCES[kind][level];
@@ -99,7 +135,7 @@ function renderProgressBar(kind: BadgeKind, count: number) {
         <View style={styles.progressBar}>
           <View style={[styles.progressFill, { width: '100%' }]} />
         </View>
-        <Text style={styles.progressText}>最高メダル獲得済み</Text>
+        <Text style={styles.progressText}>最高バッジ獲得済み</Text>
       </View>
     );
   }
@@ -110,7 +146,7 @@ function renderProgressBar(kind: BadgeKind, count: number) {
       <View style={styles.progressBar}>
         <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
       </View>
-      <Text style={styles.progressText}>次のメダルまで あと {remain} 回</Text>
+      <Text style={styles.progressText}>次のバッジまで あと {remain} {kind === 'totalSaved' ? '円' : '回'}</Text>
     </View>
   );
 }
@@ -138,8 +174,10 @@ const MyPageScreen: React.FC = () => {
   const [monthsFoodUnder50k, setMonthsFoodUnder50k] = useState<number>(0);
   const [monthsBudgetAchieved, setMonthsBudgetAchieved] = useState<number>(0);
   const [totalSavedAmount, setTotalSavedAmount] = useState<number>(0);
+  const isFocused = useIsFocused();
 
   useEffect(() => {
+    let unsubscribeTotals: (() => void) | null = null;
     (async () => {
       const uid = getFirebaseAuth().currentUser?.uid;
       if (!uid) return;
@@ -176,9 +214,21 @@ const MyPageScreen: React.FC = () => {
           const bs = await getBadges(householdId);
           setBadges(bs.map(b => ({ id: b.id, name: b.name, awardedAt: b.awardedAt })));
           // 累計カウント取得（自炊・ウィークリーアクション）
+          // 初回は現在値を取得し、その後リアルタイム購読で反映
           const cook = await getCookingCounts(householdId);
           setLunchCookTotal(cook.lunchTotal);
           setDinnerCookTotal(cook.dinnerTotal);
+          // counters を購読（優先）。万一 counters が未作成/遅延の環境でも events 集計をフォールバック購読
+          unsubscribeTotals = subscribeCookingTotals(householdId, (totals) => {
+            setLunchCookTotal(totals.lunchTotal);
+            setDinnerCookTotal(totals.dinnerTotal);
+          });
+          const unsubscribeFallback = subscribeCookingTotalsFromEvents(householdId, (totals) => {
+            // counters が 0 のまま、events は >0 のケースに備え、大きい方を採用
+            setLunchCookTotal((prev) => Math.max(prev, totals.lunchTotal));
+            setDinnerCookTotal((prev) => Math.max(prev, totals.dinnerTotal));
+          });
+          // 月次メトリクスも取得
           const wa = await getWeeklyActionCompletedCount(householdId);
           setWeeklyActionDoneTotal(wa);
           const underCount = await countMonthsFoodUnder50k(householdId);
@@ -190,7 +240,8 @@ const MyPageScreen: React.FC = () => {
         }
       }
     })();
-  }, []);
+    return () => { if (unsubscribeTotals) unsubscribeTotals(); };
+  }, [isFocused]);
 
   const days = useMemo(() => startedAt ? Math.floor((Date.now() - startedAt.getTime()) / (1000 * 60 * 60 * 24)) : 0, [startedAt]);
   const userTypeLabel = isOwner ? 'メインユーザー' : 'ペアユーザー';

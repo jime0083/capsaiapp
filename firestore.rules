@@ -38,5 +38,33 @@ service cloud.firestore {
       );
       allow delete: if false;
     }
+
+    // 週次自炊イベント（1日1件/種別）
+    match /weeklyCooking/{id} {
+      allow read: if isSignedIn() && (resource.data.householdId == userHousehold() || isAdmin());
+      allow create, update: if isSignedIn() && (request.resource.data.householdId == userHousehold() || isAdmin());
+      allow delete: if false;
+    }
+
+    // 週別の集計カウンタ
+    match /weeklyCookingCounters/{id} {
+      allow read: if isSignedIn() && (resource.data.householdId == userHousehold() || isAdmin());
+      allow create, update: if isSignedIn() && (request.resource.data.householdId == userHousehold() || isAdmin());
+      allow delete: if false;
+    }
+
+    // 世帯累計カウンタ（docId は householdId を想定）
+    match /counters/{counterId} {
+      allow read: if isSignedIn() && (resource.data.householdId == userHousehold() || isAdmin());
+      allow create, update: if isSignedIn() && (request.resource.data.householdId == userHousehold() || isAdmin());
+      allow delete: if false;
+    }
+
+    // 月次指標（予算達成/食費5万未満/節約額）
+    match /monthlyMetrics/{metricId} {
+      allow read: if isSignedIn() && (resource.data.householdId == userHousehold() || isAdmin());
+      allow create, update: if isSignedIn() && (request.resource.data.householdId == userHousehold() || isAdmin());
+      allow delete: if false;
+    }
   }
 }
