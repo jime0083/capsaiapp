@@ -14,6 +14,8 @@ type Props = {
   height?: number;
   title?: string; // グラフタイトル（背景内上部）
   titleIcon?: any; // 追加: タイトル左のアイコン(require資産)
+  emptyMessage?: string; // データが空のときに表示する文言
+  emptyHeight?: number; // データが空のときの全体高さ（未指定なら120）
 };
 
 function polarToCartesian(cx: number, cy: number, r: number, angle: number) {
@@ -28,11 +30,14 @@ function arcPath(cx: number, cy: number, r: number, startAngle: number, endAngle
   return `M ${start.x} ${start.y} A ${r} ${r} 0 ${largeArcFlag} 0 ${end.x} ${end.y} L ${cx} ${cy} Z`;
 }
 
-export const PlaceholderChart: React.FC<Props> = ({ data, height = 160, title, titleIcon }) => {
-  const total = useMemo(() => data.reduce((a, s) => a + (s.value || 0), 0) || 1, [data]);
+export const PlaceholderChart: React.FC<Props> = ({ data, height = 160, title, titleIcon, emptyMessage, emptyHeight }) => {
+  const totalRaw = useMemo(() => data.reduce((a, s) => a + (s.value || 0), 0), [data]);
+  const isEmpty = !data || data.length === 0 || totalRaw <= 0;
+  const total = isEmpty ? 1 : totalRaw;
   const [hoverIdx, setHoverIdx] = useState<number | null>(null);
   const headerH = title ? 28 + spacing.md : 0; // タイトル行 + 上部パディング分
-  const size = Math.max(0, height - headerH);
+  const effectiveHeight = isEmpty ? (emptyHeight ?? 120) : height;
+  const size = Math.max(0, effectiveHeight - headerH);
   const r = size / 2 - 8;
   const cx = size / 2;
   const cy = size / 2;
@@ -59,7 +64,8 @@ export const PlaceholderChart: React.FC<Props> = ({ data, height = 160, title, t
   }, [hoverIdx, data, total, cx, cy, r]);
 
   return (
-    <View style={[styles.container, { height, width: '100%' }]}> 
+    <View style={[styles.container, { height: effectiveHeight, width: '100%' }]}> 
+      <View style={styles.leftStripe} />
       {title ? (
         <View style={styles.titleRow}>
           {titleIcon ? <Image source={titleIcon} style={styles.titleIcon} /> : null}
@@ -68,36 +74,44 @@ export const PlaceholderChart: React.FC<Props> = ({ data, height = 160, title, t
           </View>
         </View>
       ) : null}
-      <View style={[styles.chartWrap, { height: size, width: '100%' }]}> 
-        <Svg height={size} width={size}>
-          <G>
-          {data.map((s, idx) => {
-            const sliceAngle = (s.value / total) * 360;
-            const d = arcPath(cx, cy, r, angle, angle + sliceAngle);
-            const thisIdx = idx;
-            angle += sliceAngle;
-            return (
-              <Path
-                key={s.key + idx}
-                d={d}
-                fill={s.color}
-                onPressIn={() => setHoverIdx(thisIdx)}
-                // @ts-ignore web only
-                onMouseEnter={() => setHoverIdx(thisIdx)}
-                // @ts-ignore web only
-                onMouseLeave={() => setHoverIdx(null)}
-              />
-            );
-          })}
-          </G>
-        </Svg>
-      </View>
-      {hovered && hoverPos ? (
-        <View style={[styles.tooltip, { left: hoverPos.x + 8, top: hoverPos.y - 10 }]}>
-          <Text style={styles.tooltipText}>{hovered.key}</Text>
-          <Text style={styles.tooltipText}>{`${hovered.value.toLocaleString()} 円`}</Text>
+      {isEmpty ? (
+        <View style={[styles.emptyWrap, { height: size, width: '100%' }]}>
+          <Text style={styles.emptyText}>{emptyMessage || 'データがありません'}</Text>
         </View>
-      ) : null}
+      ) : (
+        <>
+          <View style={[styles.chartWrap, { height: size, width: '100%' }]}> 
+            <Svg height={size} width={size}>
+              <G>
+              {data.map((s, idx) => {
+                const sliceAngle = (s.value / total) * 360;
+                const d = arcPath(cx, cy, r, angle, angle + sliceAngle);
+                const thisIdx = idx;
+                angle += sliceAngle;
+                return (
+                  <Path
+                    key={s.key + idx}
+                    d={d}
+                    fill={s.color}
+                    onPressIn={() => setHoverIdx(thisIdx)}
+                    // @ts-ignore web only
+                    onMouseEnter={() => setHoverIdx(thisIdx)}
+                    // @ts-ignore web only
+                    onMouseLeave={() => setHoverIdx(null)}
+                  />
+                );
+              })}
+              </G>
+            </Svg>
+          </View>
+          {hovered && hoverPos ? (
+            <View style={[styles.tooltip, { left: hoverPos.x + 8, top: hoverPos.y - 10 }]}>
+              <Text style={styles.tooltipText}>{hovered.key}</Text>
+              <Text style={styles.tooltipText}>{`${hovered.value.toLocaleString()} 円`}</Text>
+            </View>
+          ) : null}
+        </>
+      )}
     </View>
   );
 };
@@ -110,6 +124,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingTop: spacing.md,
     paddingHorizontal: spacing.md,
+    paddingLeft: 24,
     alignItems: 'stretch',
     justifyContent: 'flex-start',
     position: 'relative',
@@ -137,6 +152,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  emptyWrap: {
+    width: '100%',
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    color: '#6B7280',
+    fontSize: 14,
+    textAlign: 'left',
+    width: '100%',
+  },
   tooltip: {
     position: 'absolute',
     top: 8,
@@ -147,6 +173,7 @@ const styles = StyleSheet.create({
   },
   tooltipText: { color: '#fff', fontSize: 12 },
   label: { color: colors.text, fontSize: 14 },
+  leftStripe: { position: 'absolute', left: 8, top: 10, bottom: 10, width: 6, borderRadius: 4, backgroundColor: '#000000' },
 });
 
 export default PlaceholderChart;

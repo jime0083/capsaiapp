@@ -286,7 +286,9 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             title="今月の支出内訳"
             titleIcon={require('../icons/data5.png')}
             height={220}
-            data={pie.length ? pie : [{ key: 'なし', value: 1, color: '#444' }]}
+            emptyHeight={120}
+            emptyMessage="今月の支出はまだありません"
+            data={pie}
           />
         </View>
       </FadeInUp>
