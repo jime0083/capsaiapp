@@ -5,7 +5,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Modal, TextInput, Image } from 'react-native';
 import { colors, spacing } from '../styles/theme';
 import { getFirebaseAuth, getFirebaseFirestore } from '../lib/firebase';
-import { getUserProfile, getLatestGoal, getBadges, updateUserDisplayName, updateGoalTitle, updateGoalPlan, cancelSubscription, updateGoalDeadline, getCookingCounts, getWeeklyActionCompletedCount, countMonthsFoodUnder50k, countMonthsBudgetAchieved, getTotalSavedAmount, subscribeCookingTotals, subscribeCookingTotalsFromEvents, getCookingCountsFromEvents } from '../lib/firestoreApi';
+import { getUserProfile, getLatestGoal, getBadges, updateUserDisplayName, updateGoalTitle, updateGoalPlan, cancelSubscription, updateGoalDeadline, getCookingCounts, getWeeklyActionCompletedCount, countMonthsFoodUnder50k, countMonthsBudgetAchieved, getTotalSavedAmount, subscribeCookingTotals, subscribeCookingTotalsFromEvents, getCookingCountsFromEvents, getMonthlyTransactions } from '../lib/firestoreApi';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import FadeInUp from '../components/FadeInUp';
 import { Picker } from '@react-native-picker/picker';
@@ -88,7 +88,8 @@ type BadgeKind = 'lunch' | 'dinner' | 'weekly' | 'monthsUnder50k' | 'monthsBudge
 function getAchievedLevelIndex(count: number, thresholds: number[]): number {
   let idx = -1;
   for (let i = 0; i < thresholds.length; i++) {
-    if (count > thresholds[i]) idx = i;
+    // 閾値「以上」で昇格（同値も昇格）
+    if (count >= thresholds[i]) idx = i;
   }
   return idx; // -1 の場合は未獲得
 }
@@ -107,7 +108,8 @@ function getBadgeImage(kind: BadgeKind, count: number) {
   // 下限: 白メダル
   if (kind === 'lunch' && count < 5) return WHITE_SOURCES.lunch;
   if (kind === 'dinner' && count < 5) return WHITE_SOURCES.dinner;
-  if (kind === 'weekly' && count <= 2) return WHITE_SOURCES.weekly;
+  // weekly は「2」で昇格させるため、白は <2 に変更
+  if (kind === 'weekly' && count < 2) return WHITE_SOURCES.weekly;
   if (kind === 'monthsUnder50k' && count < 1) return WHITE_SOURCES.monthsUnder50k;
   if (kind === 'monthsBudgetAchieved' && count < 1) return WHITE_SOURCES.monthsBudgetAchieved;
   if (kind === 'totalSaved' && count < 10000) return WHITE_SOURCES.totalSaved;
@@ -115,7 +117,8 @@ function getBadgeImage(kind: BadgeKind, count: number) {
   // 上限: 黒メダル
   if (kind === 'lunch' && count >= 300) return BLACK_SOURCES.lunch;
   if (kind === 'dinner' && count >= 300) return BLACK_SOURCES.dinner;
-  if (kind === 'weekly' && count > 200) return BLACK_SOURCES.weekly;
+  // weekly の黒も「以上」で昇格
+  if (kind === 'weekly' && count >= 200) return BLACK_SOURCES.weekly;
   if (kind === 'monthsUnder50k' && count >= 50) return BLACK_SOURCES.monthsUnder50k;
   if (kind === 'monthsBudgetAchieved' && count >= 50) return BLACK_SOURCES.monthsBudgetAchieved;
   if (kind === 'totalSaved' && count >= 1000000) return BLACK_SOURCES.totalSaved;
@@ -213,8 +216,8 @@ const MyPageScreen: React.FC = () => {
             }
           }
           try {
-            const bs = await getBadges(householdId);
-            setBadges(bs.map(b => ({ id: b.id, name: b.name, awardedAt: b.awardedAt })));
+          const bs = await getBadges(householdId);
+          setBadges(bs.map(b => ({ id: b.id, name: b.name, awardedAt: b.awardedAt })));
           } catch (e) {
             console.warn('getBadges failed', e);
           }
@@ -235,15 +238,77 @@ const MyPageScreen: React.FC = () => {
             setLunchCookTotal(totals.lunchTotal);
             setDinnerCookTotal(totals.dinnerTotal);
           });
-          // 月次メトリクスも取得
-          const wa = await getWeeklyActionCompletedCount(householdId);
-          setWeeklyActionDoneTotal(wa);
-          const underCount = await countMonthsFoodUnder50k(householdId);
-          setMonthsFoodUnder50k(underCount);
-          const budgetAchieved = await countMonthsBudgetAchieved(householdId);
-          setMonthsBudgetAchieved(budgetAchieved);
-          const savedTotal = await getTotalSavedAmount(householdId);
-          setTotalSavedAmount(savedTotal);
+          // 週のウィークリーアクション達成回数（世帯合計）
+          try {
+            const wa = await getWeeklyActionCompletedCount(householdId);
+            setWeeklyActionDoneTotal(wa);
+          } catch (e) {
+            console.warn('getWeeklyActionCompletedCount failed', e);
+            setWeeklyActionDoneTotal(0);
+          }
+          // 目標作成月以降（前月まで）の「月の食費5万以下」「今月の予算達成」「通算節約」を計算
+          try {
+            const toMonth = (value: any): string | null => {
+              try {
+                if (typeof value === 'string') {
+                  const s = value.replace(/\//g, '-');
+                  if (/^\d{4}-\d{2}$/.test(s)) return s;
+                  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s.slice(0, 7);
+                  const d = new Date(s);
+                  if (!isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                  return null;
+                }
+                if (typeof value === 'number') {
+                  const d = new Date(value);
+                  if (!isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                  return null;
+                }
+                if (value && typeof value.seconds === 'number') {
+                  const d = new Date(value.seconds * 1000);
+                  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                }
+                return null;
+              } catch { return null; }
+            };
+            const startMonth = toMonth((g as any)?.createdAt) || toMonth(profile['createdAt']);
+            const now = new Date();
+            const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            // 目標作成月が未取得 or 未来なら集計 0
+            if (!startMonth) {
+              setMonthsFoodUnder50k(0);
+              setMonthsBudgetAchieved(0);
+              setTotalSavedAmount(0);
+            } else {
+              const [sy, sm] = startMonth.split('-').map((n) => Number(n));
+              let cursor = new Date(sy, sm - 1, 1);
+              let foodUnder = 0;
+              let budgetAchieved = 0;
+              let savedTotal = 0;
+              const budgetPerMonth = Number(g?.monthlyIncome || 0);
+              const allowedUserIds: string[] = [uid, ...pairIds];
+              while (cursor <= lastMonth) {
+                const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
+                const txs = await getMonthlyTransactions(householdId, key, undefined, [], [], allowedUserIds);
+                const spending = txs.reduce((a, t) => a + (Number(t.sharedAmount) || 0), 0);
+                const targetCategories = new Set<string>(['食費', '食費(コンビニ)', '食費(外食)', '外食']);
+                const monthlyFood = txs
+                  .filter((t) => targetCategories.has(String(t.category)))
+                  .reduce((a, t) => a + (Number(t.sharedAmount) || 0), 0);
+                if (monthlyFood < 50000) foodUnder += 1;
+                if (budgetPerMonth > 0 && spending <= budgetPerMonth) budgetAchieved += 1;
+                savedTotal += Math.max(budgetPerMonth - spending, 0);
+                cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+              }
+              setMonthsFoodUnder50k(foodUnder);
+              setMonthsBudgetAchieved(budgetAchieved);
+              setTotalSavedAmount(savedTotal);
+            }
+          } catch (e) {
+            console.warn('monthly metrics compute failed', e);
+            setMonthsFoodUnder50k(0);
+            setMonthsBudgetAchieved(0);
+            setTotalSavedAmount(0);
+          }
         }
       }
     })();
