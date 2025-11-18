@@ -4,8 +4,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ScrollView, Modal, TextInput, Image } from 'react-native';
 import { colors, spacing } from '../styles/theme';
-import { getFirebaseAuth } from '../lib/firebase';
-import { getUserProfile, getLatestGoal, getBadges, updateUserDisplayName, updateGoalTitle, updateGoalPlan, cancelSubscription, updateGoalDeadline, getCookingCounts, getWeeklyActionCompletedCount, countMonthsFoodUnder50k, countMonthsBudgetAchieved, getTotalSavedAmount, subscribeCookingTotals, subscribeCookingTotalsFromEvents } from '../lib/firestoreApi';
+import { getFirebaseAuth, getFirebaseFirestore } from '../lib/firebase';
+import { getUserProfile, getLatestGoal, getBadges, updateUserDisplayName, updateGoalTitle, updateGoalPlan, cancelSubscription, updateGoalDeadline, getCookingCounts, getWeeklyActionCompletedCount, countMonthsFoodUnder50k, countMonthsBudgetAchieved, getTotalSavedAmount, subscribeCookingTotals, subscribeCookingTotalsFromEvents, getCookingCountsFromEvents } from '../lib/firestoreApi';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import FadeInUp from '../components/FadeInUp';
 import { Picker } from '@react-native-picker/picker';
 import { useIsFocused } from '@react-navigation/native';
@@ -177,7 +178,7 @@ const MyPageScreen: React.FC = () => {
   const isFocused = useIsFocused();
 
   useEffect(() => {
-    let unsubscribeTotals: (() => void) | null = null;
+    let unsubscribeEvents: (() => void) | null = null;
     (async () => {
       const uid = getFirebaseAuth().currentUser?.uid;
       if (!uid) return;
@@ -211,22 +212,28 @@ const MyPageScreen: React.FC = () => {
               setPickDay(d.getDate());
             }
           }
-          const bs = await getBadges(householdId);
-          setBadges(bs.map(b => ({ id: b.id, name: b.name, awardedAt: b.awardedAt })));
+          try {
+            const bs = await getBadges(householdId);
+            setBadges(bs.map(b => ({ id: b.id, name: b.name, awardedAt: b.awardedAt })));
+          } catch (e) {
+            console.warn('getBadges failed', e);
+          }
           // 累計カウント取得（自炊・ウィークリーアクション）
-          // 初回は現在値を取得し、その後リアルタイム購読で反映
-          const cook = await getCookingCounts(householdId);
-          setLunchCookTotal(cook.lunchTotal);
-          setDinnerCookTotal(cook.dinnerTotal);
-          // counters を購読（優先）。万一 counters が未作成/遅延の環境でも events 集計をフォールバック購読
-          unsubscribeTotals = subscribeCookingTotals(householdId, (totals) => {
+          // 初回はイベント全件から厳密に集計（過去の押下回数を100%反映）
+          try {
+            const totals = await getCookingCountsFromEvents(householdId);
             setLunchCookTotal(totals.lunchTotal);
             setDinnerCookTotal(totals.dinnerTotal);
-          });
-          const unsubscribeFallback = subscribeCookingTotalsFromEvents(householdId, (totals) => {
-            // counters が 0 のまま、events は >0 のケースに備え、大きい方を採用
-            setLunchCookTotal((prev) => Math.max(prev, totals.lunchTotal));
-            setDinnerCookTotal((prev) => Math.max(prev, totals.dinnerTotal));
+          } catch {
+            // フォールバック（理論上ここは通らない想定）
+            console.warn('getCookingCountsFromEvents failed; defaulting to 0');
+            setLunchCookTotal(0);
+            setDinnerCookTotal(0);
+          }
+          // 以後は events ベースでリアルタイム反映（権限エラーのない安全な購読）
+          unsubscribeEvents = subscribeCookingTotalsFromEvents(householdId, (totals) => {
+            setLunchCookTotal(totals.lunchTotal);
+            setDinnerCookTotal(totals.dinnerTotal);
           });
           // 月次メトリクスも取得
           const wa = await getWeeklyActionCompletedCount(householdId);
@@ -240,7 +247,7 @@ const MyPageScreen: React.FC = () => {
         }
       }
     })();
-    return () => { if (unsubscribeTotals) unsubscribeTotals(); };
+    return () => { if (unsubscribeEvents) unsubscribeEvents(); };
   }, [isFocused]);
 
   const days = useMemo(() => startedAt ? Math.floor((Date.now() - startedAt.getTime()) / (1000 * 60 * 60 * 24)) : 0, [startedAt]);

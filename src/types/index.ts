@@ -29,6 +29,7 @@ export interface Goal {
   imageUrl?: string;
   monthlyIncome?: number; // 追加: 月の予算・収入
   durationMonths?: number; // 追加: 目標期間（月）
+  createdAt?: Timestamp; // 追加: 目標作成時刻
 }
 
 export interface Budget {

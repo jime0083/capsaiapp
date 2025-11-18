@@ -8,7 +8,7 @@ import TopBanner from '../components/TopBanner';
 import FadeInUp from '../components/FadeInUp';
 import PlaceholderChart from '../components/PlaceholderChart';
 import { getFirebaseAuth } from '../lib/firebase';
-import { getUserProfile, subscribeLatestGoal, subscribeUserTransactionsUnion, upsertCookingEventAndCounters, subscribeWeeklyCooking, subscribeWeeklyCookingCounters } from '../lib/firestoreApi';
+import { getUserProfile, subscribeLatestGoal, subscribeUserTransactionsUnion, upsertCookingEventAndCounters, subscribeWeeklyCooking, subscribeWeeklyCookingCounters, getCarryOverHistory } from '../lib/firestoreApi';
 import { useIsFocused } from '@react-navigation/native';
 import { categoryColors } from '../mock/sampleData';
 
@@ -59,6 +59,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const [lunchCookCount, setLunchCookCount] = useState<number>(0);
   const [dinnerDaysThisWeek, setDinnerDaysThisWeek] = useState<string[]>([]);
   const [lunchDaysThisWeek, setLunchDaysThisWeek] = useState<string[]>([]);
+  const [carrySumPrev, setCarrySumPrev] = useState<number>(0);
   const isFocused = useIsFocused();
   const weekStart = useMemo(() => {
     const d = new Date();
@@ -86,7 +87,7 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
       const allowedUserIds = [uid, ...pairUserIds];
       if (!householdId) return;
 
-      unsubGoal = subscribeLatestGoal(householdId, (g) => {
+      unsubGoal = subscribeLatestGoal(householdId, async (g) => {
         if (g) {
           setGoal({
             title: g.title,
@@ -95,6 +96,68 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
             monthlyIncome: Number(g.monthlyIncome || 0),
             deadline: g.deadline,
           });
+          // 目標作成月以降の前月までの (予算-支出) 累計を算出
+          try {
+            const createdAt = (g as any).createdAt;
+            const toMonth = (value: any): string | null => {
+              try {
+                if (typeof value === 'string') {
+                  const s = value.replace(/\//g, '-');
+                  if (/^\d{4}-\d{2}$/.test(s)) return s;
+                  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s.slice(0, 7);
+                  const d = new Date(s);
+                  if (!isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                  return null;
+                }
+                if (typeof value === 'number') {
+                  const d = new Date(value);
+                  if (!isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                  return null;
+                }
+                if (value && typeof value.seconds === 'number') {
+                  const d = new Date(value.seconds * 1000);
+                  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                }
+                return null;
+              } catch { return null; }
+            };
+            // createdAt が無い場合のフォールバック: goal.id が 'goal-<timestamp>' 形式ならそこから推定、
+            // さらに無ければユーザープロファイルの createdAt から推定
+            const parseMonthFromGoalId = (id: any): string | null => {
+              if (!id || typeof id !== 'string') return null;
+              const m = id.match(/(\d{10,13})$/);
+              if (!m) return null;
+              const raw = m[1];
+              const ms = raw.length === 13 ? Number(raw) : Number(raw) * 1000;
+              if (!isFinite(ms)) return null;
+              return toMonth(ms);
+            };
+            const startMonth =
+              toMonth(createdAt) ||
+              parseMonthFromGoalId((g as any).id) ||
+              toMonth(profile && (profile['createdAt'] as any)) ||
+              null;
+            const now = new Date();
+            const prevMonthFirst = new Date(now.getFullYear(), now.getMonth(), 1);
+            const monthsDiff = (from: string | null): number => {
+              if (!from) return 0;
+              const [fy, fm] = from.split('-').map((v) => Number(v));
+              const y = prevMonthFirst.getFullYear() - fy;
+              const m = prevMonthFirst.getMonth() + 1 - fm;
+              return Math.max(y * 12 + m, 0);
+            };
+            const back = monthsDiff(startMonth);
+            if (back > 0) {
+              const list = await getCarryOverHistory(householdId, allowedUserIds, back);
+              const sum = list.reduce((a, c) => a + (Number(c.amount) || 0), 0);
+              setCarrySumPrev(sum);
+            } else {
+              setCarrySumPrev(0);
+            }
+          } catch (e) {
+            console.warn('compute carrySumPrev failed', e);
+            setCarrySumPrev(0);
+          }
         } else { setGoal(null); }
       });
 
@@ -135,7 +198,12 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
     return () => { if (unsubGoal) unsubGoal(); if (unsubUserTx) unsubUserTx(); if (unsubCook) unsubCook(); };
   }, [isFocused]);
 
-  const remainingToTarget = useMemo(() => !goal ? 0 : Math.max(goal.targetAmount - goal.currentAmount, 0), [goal]);
+  const remainingToTarget = useMemo(() => {
+    if (!goal) return 0;
+    // 目標作成月から「前月まで」の(予算-出費)累計のみを差し引く
+    const raw = goal.targetAmount - carrySumPrev;
+    return Math.max(raw, 0);
+  }, [goal, carrySumPrev]);
   const monthsRemaining = useMemo(() => {
     if (!goal) return 0;
     const now = new Date();
@@ -147,9 +215,11 @@ const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const thisMonthBudgetLeft = useMemo(() => !goal ? 0 : Math.max(goal.monthlyIncome - thisMonthSpending, 0), [goal, thisMonthSpending]);
   const goalPercent = useMemo(() => {
     if (!goal) return 0;
-    const p = Math.round((goal.currentAmount / goal.targetAmount) * 100);
+    // 達成率も前月までの累計のみで計算
+    const achieved = carrySumPrev;
+    const p = Math.round((achieved / goal.targetAmount) * 100);
     return isFinite(p) ? p : 0;
-  }, [goal]);
+  }, [goal, carrySumPrev]);
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>

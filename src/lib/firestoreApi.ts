@@ -8,7 +8,7 @@ import { Platform } from 'react-native';
 import { GoogleAuthProvider, signInWithCredential, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc, collection, getDocs, query, where, limit, onSnapshot, orderBy, increment } from 'firebase/firestore';
 import { getFirebaseAuth, getFirebaseFirestore } from './firebase';
-import { User, Goal, Budget, Transaction, Timestamp, WeeklySelection } from '../types';
+import { User, Goal, Budget, Transaction, Timestamp, WeeklySelection, Badge } from '../types';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -219,6 +219,10 @@ export async function getLatestGoal(householdId: string): Promise<Goal | null> {
     imageUrl: data.imageUrl || undefined,
     monthlyIncome: Number(data.monthlyIncome) || undefined,
     durationMonths: Number(data.durationMonths) || undefined,
+    // createdAt は Timestamp | number | string いずれかの可能性があるため素直に通す
+    // number化は呼び出し側で toMonthString を使って処理
+    // @ts-ignore 既存の Goal 型にオプショナルで許容
+    createdAt: (data.createdAt?.seconds ? data.createdAt.seconds * 1000 : data.createdAt) || undefined,
   };
   return goal;
 }
@@ -660,6 +664,23 @@ export function subscribeCookingTotalsFromEvents(
     onChange({ dinnerTotal: dinner, lunchTotal: lunch });
   });
   return unsub;
+}
+
+// 追加: 週イベントから通算自炊回数を都度集計（初期表示用の非リアルタイム版）
+export async function getCookingCountsFromEvents(
+  householdId: string,
+): Promise<{ dinnerTotal: number; lunchTotal: number }> {
+  const db = getFirebaseFirestore();
+  const colRef = collection(db, 'weeklyCooking');
+  const q1 = query(colRef, where('householdId', '==', householdId));
+  const snap = await getDocs(q1);
+  let dinner = 0, lunch = 0;
+  snap.forEach((d) => {
+    const data = d.data() as any;
+    if (data.kind === 'dinner') dinner += 1;
+    else if (data.kind === 'lunch') lunch += 1;
+  });
+  return { dinnerTotal: dinner, lunchTotal: lunch };
 }
 
 export async function getCookingCounts(householdId: string): Promise<{ dinnerTotal: number; lunchTotal: number }> {

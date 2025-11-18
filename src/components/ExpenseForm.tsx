@@ -15,7 +15,7 @@ type Props = {
     personalAmount: number; // 差し引く個人出費
     sharedAmount: number; // 自動: total - personal
     isShared: boolean; // 常に true 扱いで保存
-  }) => void;
+  }) => void | Promise<void>;
   categoryOptions: { name: string; color: string }[];
 };
 
@@ -33,17 +33,22 @@ export const ExpenseForm: React.FC<Props> = ({ onSubmit, categoryOptions }) => {
     return Math.max(t - p, 0);
   }, [totalAmount, personalAmount]);
 
-  const submit = () => {
+  const submit = async () => {
     const t = Number(totalAmount) || 0;
     const p = Number(personalAmount) || 0;
-    onSubmit({
+    await Promise.resolve(onSubmit({
       date,
       category,
       totalAmount: t,
       personalAmount: p,
       sharedAmount: Math.max(t - p, 0),
       isShared: true,
-    });
+    }));
+    // 送信後はフォームを初期化
+    setDate(new Date().toISOString().slice(0, 10));
+    setCategory(categoryOptions[0]?.name ?? 'その他');
+    setTotalAmount('0');
+    setPersonalAmount('0');
   };
 
   const adjustDate = (deltaDays: number) => {

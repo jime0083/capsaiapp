@@ -1,7 +1,7 @@
 // このファイルは Cursor により生成された
 // Input: 支出を記録（個人出費を差し引いた残りを共有出費として保存）
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Alert, ScrollView } from 'react-native';
 import { colors, spacing } from '../styles/theme';
 import ExpenseForm from '../components/ExpenseForm';
@@ -9,11 +9,19 @@ import { categoryColors } from '../mock/sampleData';
 import { createTransaction, getUserProfile, ensureUserHousehold } from '../lib/firestoreApi';
 import { Transaction } from '../types';
 import { getFirebaseAuth } from '../lib/firebase';
+import { useIsFocused } from '@react-navigation/native';
 
 type Props = { navigation: any };
 
 const InputScreen: React.FC<Props> = ({ navigation }) => {
   const categoryOptions = Object.entries(categoryColors).map(([name, color]) => ({ name, color }));
+  const isFocused = useIsFocused();
+  const [formKey, setFormKey] = useState<number>(0);
+
+  useEffect(() => {
+    // 画面に戻ってきたときにフォームを再マウントして値を初期化
+    if (isFocused) setFormKey((k) => k + 1);
+  }, [isFocused]);
 
   const handleSubmit = async (p: {
     date: string;
@@ -51,7 +59,7 @@ const InputScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <ExpenseForm onSubmit={handleSubmit} categoryOptions={categoryOptions} />
+      <ExpenseForm key={formKey} onSubmit={handleSubmit} categoryOptions={categoryOptions} />
     </ScrollView>
   );
 };

@@ -7,7 +7,7 @@ import { colors, spacing } from '../styles/theme';
 import CongratsEffect from '../components/CongratsEffect';
 import FadeInUp from '../components/FadeInUp';
 import { getFirebaseAuth } from '../lib/firebase';
-import { getUserProfile, getCarryOverHistory, getWeekStart, subscribeLatestGoal, subscribeUserTransactionsUnion, subscribeWeeklySelections, upsertWeeklySelection } from '../lib/firestoreApi';
+import { getUserProfile, getCarryOverHistory, getWeekStart, subscribeLatestGoal, subscribeWeeklySelections, upsertWeeklySelection } from '../lib/firestoreApi';
 import { categoryColors } from '../mock/sampleData';
 
 const GoalsScreen: React.FC = () => {
@@ -34,7 +34,7 @@ const GoalsScreen: React.FC = () => {
       const allowedUserIds = [uid, ...pairUserIds];
       if (!householdId) return;
 
-      unsubGoal = subscribeLatestGoal(householdId, (g) => {
+      unsubGoal = subscribeLatestGoal(householdId, async (g) => {
         if (!g) { setGoal(null); return; }
         setGoal({
           title: g.title,
@@ -42,39 +42,65 @@ const GoalsScreen: React.FC = () => {
           currentAmount: g.currentAmount,
           monthlyIncome: Number(g.monthlyIncome || 0),
         });
-      });
 
-      // キャリーオーバー: ユーザーの利用開始以降のみ表示
-      const all = await getCarryOverHistory(householdId, allowedUserIds, 24);
-      // createdAt から 'YYYY-MM' を作成
-      const createdAt = (profile && (profile['createdAt'] as any)) || null;
-      const toMonthString = (value: any): string | null => {
+        // 目標作成月以降の前月までの (予算-支出) を取得
         try {
-          if (!value) return null;
-          if (typeof value === 'string') {
-            const s = value.replace(/\//g, '-');
-            if (/^\d{4}-\d{2}$/.test(s)) return s;
-            if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s.slice(0, 7);
-            const d = new Date(s);
-            if (!isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-            return null;
-          }
-          if (typeof value === 'number') {
-            const d = new Date(value);
-            if (!isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-            return null;
-          }
-          if (value && typeof value.seconds === 'number') {
-            const d = new Date(value.seconds * 1000);
-            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-          }
-          return null;
-        } catch { return null; }
-      };
-      const startMonth = toMonthString(createdAt);
-      const filtered = startMonth ? all.filter((c) => c.month >= startMonth) : all;
-      setCarryAll(filtered);
-      setCarryLatest5(filtered.slice(0, 5));
+          const createdAt = (g as any).createdAt;
+          const toMonth = (value: any): string | null => {
+            try {
+              if (typeof value === 'string') {
+                const s = value.replace(/\//g, '-');
+                if (/^\d{4}-\d{2}$/.test(s)) return s;
+                if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s.slice(0, 7);
+                const d = new Date(s);
+                if (!isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                return null;
+              }
+              if (typeof value === 'number') {
+                const d = new Date(value);
+                if (!isNaN(d.getTime())) return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                return null;
+              }
+              if (value && typeof value.seconds === 'number') {
+                const d = new Date(value.seconds * 1000);
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+              }
+              return null;
+            } catch { return null; }
+          };
+          const parseMonthFromGoalId = (id: any): string | null => {
+            if (!id || typeof id !== 'string') return null;
+            const m = id.match(/(\d{10,13})$/);
+            if (!m) return null;
+            const raw = m[1];
+            const ms = raw.length === 13 ? Number(raw) : Number(raw) * 1000;
+            if (!isFinite(ms)) return null;
+            return toMonth(ms);
+          };
+          const startMonth =
+            toMonth(createdAt) ||
+            parseMonthFromGoalId((g as any).id) ||
+            toMonth(profile && (profile['createdAt'] as any)) ||
+            null;
+          const now = new Date();
+          const prevMonthFirst = new Date(now.getFullYear(), now.getMonth(), 1);
+          const monthsDiff = (from: string | null): number => {
+            if (!from) return 0;
+            const [fy, fm] = from.split('-').map((v) => Number(v));
+            const y = prevMonthFirst.getFullYear() - fy;
+            const m = prevMonthFirst.getMonth() + 1 - fm;
+            return Math.max(y * 12 + m, 0);
+          };
+          const back = monthsDiff(startMonth);
+          const all = back > 0 ? await getCarryOverHistory(householdId, allowedUserIds, back) : [];
+          setCarryAll(all);
+          setCarryLatest5(all.slice(0, 5));
+        } catch (e) {
+          console.warn('carryOverHistory(load) failed', e);
+          setCarryAll([]);
+          setCarryLatest5([]);
+        }
+      });
 
       // 今週のウィークリーアクション購読（週開始をキーに）
       const weekStart = getWeekStart(new Date());
@@ -93,9 +119,10 @@ const GoalsScreen: React.FC = () => {
 
   const percent = useMemo(() => {
     if (!goal) return 0;
-    const p = Math.round((goal.currentAmount / goal.targetAmount) * 100);
+    const prevSum = carryAll.reduce((a, c) => a + (Number(c.amount) || 0), 0);
+    const p = Math.round((prevSum / goal.targetAmount) * 100);
     return isFinite(p) ? p : 0;
-  }, [goal]);
+  }, [goal, carryAll]);
 
   const carrySumUntilPrev = useMemo(() => {
     // 直近分が最新月なので、前月までを合算
@@ -106,7 +133,7 @@ const GoalsScreen: React.FC = () => {
 
   const remainingAfterCarry = useMemo(() => {
     if (!goal) return 0;
-    const raw = goal.targetAmount - goal.currentAmount - carrySumUntilPrev;
+    const raw = goal.targetAmount - carrySumUntilPrev;
     return Math.max(raw, 0);
   }, [goal, carrySumUntilPrev]);
 
