@@ -4,6 +4,7 @@
     "slug": "capsaiapp",
     "scheme": "capsaiapp",
     "version": "1.0.0",
+    "icon": "./src/icons/capsai-icon.png",
     "orientation": "portrait",
     "platforms": ["ios", "android", "web"],
     "jsEngine": "hermes",

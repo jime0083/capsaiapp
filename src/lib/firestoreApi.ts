@@ -15,10 +15,12 @@ WebBrowser.maybeCompleteAuthSession();
 function getGoogleClientId(): string {
   const extra = (Constants as any).expoConfig?.extra || (Constants as any).manifest?.extra;
   const g = extra?.googleAuth || {};
+  // 開発〜本番まで、Expo Auth Session のプロキシで使う Web クライアントIDを優先
   if (g.expoClientId) return g.expoClientId;
+  if (g.webClientId) return g.webClientId;
   if (Platform.OS === 'ios') return g.iosClientId || '';
   if (Platform.OS === 'android') return g.androidClientId || '';
-  return g.webClientId || '';
+  return '';
 }
 
 function toAppUser(u: FirebaseUser): User {
@@ -41,9 +43,13 @@ export async function signInWithGoogle(): Promise<User> {
     tokenEndpoint: 'https://oauth2.googleapis.com/token',
   };
 
-  const redirectUri = Platform.OS === 'web'
-    ? (typeof window !== 'undefined' ? window.location.origin : AuthSession.makeRedirectUri({ useProxy: true } as any))
-    : AuthSession.makeRedirectUri({ useProxy: true } as any);
+  // Expo のプロキシを利用したシンプルなフローに統一
+  const redirectUri =
+    Platform.OS === 'web'
+      ? (typeof window !== 'undefined'
+          ? window.location.origin
+          : AuthSession.makeRedirectUri({ useProxy: true } as any))
+      : AuthSession.makeRedirectUri({ useProxy: true } as any);
 
   const clientId = getGoogleClientId();
   if (!clientId) throw new Error('Google Client ID が未設定です（app.json の extra.googleAuth を設定）');
@@ -58,7 +64,8 @@ export async function signInWithGoogle(): Promise<User> {
   });
 
   await request.makeAuthUrlAsync(discovery);
-  const result = await (request as any).promptAsync(discovery, Platform.OS === 'web' ? {} : { useProxy: true });
+  const result: AuthSession.AuthSessionResult =
+    await (request as any).promptAsync(discovery, Platform.OS === 'web' ? {} : { useProxy: true });
   if (result.type !== 'success' || !result.params.id_token) {
     throw new Error('Google 認証がキャンセルまたは失敗しました');
   }
